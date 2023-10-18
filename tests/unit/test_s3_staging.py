@@ -28,7 +28,7 @@ def test_s3_staging_secure_true(mock_minio: mock.Mock):
    verify_secure_flag_and_internal_url(mock_minio, s3Staging, True)
 
 def verify_secure_flag_and_internal_url(mock_minio: mock.Mock, s3Staging: S3Staging, secure: bool):
-      mock_minio.assert_called_once
+      mock_minio.assert_called_once()
       _, kargs = mock_minio.call_args
       assert kargs['secure'] == secure
       assert s3Staging.get_internal_url('test').startswith('https' if secure else 'http')
