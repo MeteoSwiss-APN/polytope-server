@@ -18,10 +18,10 @@
 # does it submit to any jurisdiction.
 #
 
+from .. import mongo_client_factory
 from ..auth import User
 from ..metric_collector import MongoStorageMetricCollector
 from . import authorization
-from .. import mongo_client_factory
 
 
 class MongoDBAuthorization(authorization.Authorization):

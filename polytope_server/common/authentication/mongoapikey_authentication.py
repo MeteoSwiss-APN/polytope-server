@@ -20,11 +20,11 @@
 
 from datetime import datetime
 
+from .. import mongo_client_factory
 from ..auth import User
 from ..exceptions import ForbiddenRequest
 from ..metric_collector import MongoStorageMetricCollector
 from . import authentication
-from .. import mongo_client_factory
 
 
 class ApiKeyMongoAuthentication(authentication.Authentication):

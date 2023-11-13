@@ -18,11 +18,11 @@
 # does it submit to any jurisdiction.
 #
 
+from .. import mongo_client_factory
 from ..authentication.mongodb_authentication import MongoAuthentication
 from ..exceptions import Conflict, NotFound
 from ..metric_collector import MetricCollector, MongoStorageMetricCollector
 from . import identity
-from .. import mongo_client_factory
 
 
 class MongoDBIdentity(identity.Identity):

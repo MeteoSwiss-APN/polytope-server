@@ -22,6 +22,7 @@ import logging
 
 import pymongo
 
+from .. import mongo_client_factory
 from ..metric import (
     CacheInfo,
     Metric,
@@ -34,7 +35,6 @@ from ..metric import (
 )
 from ..metric_collector import MongoStorageMetricCollector
 from . import MetricStore
-from .. import mongo_client_factory
 
 
 class MongoMetricStore(MetricStore):

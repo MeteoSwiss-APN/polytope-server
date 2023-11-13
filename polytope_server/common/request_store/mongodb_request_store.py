@@ -23,7 +23,7 @@ import logging
 
 import pymongo
 
-from .. import metric_store
+from .. import metric_store, mongo_client_factory
 from ..metric import MetricType, RequestStatusChange
 from ..metric_collector import (
     MongoRequestStoreMetricCollector,
@@ -31,7 +31,6 @@ from ..metric_collector import (
 )
 from ..request import Request
 from . import request_store
-from .. import mongo_client_factory
 
 
 class MongoRequestStore(request_store.RequestStore):

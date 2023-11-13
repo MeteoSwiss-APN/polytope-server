@@ -22,11 +22,11 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
+from .. import mongo_client_factory
 from ..auth import User
 from ..exceptions import ForbiddenRequest
 from ..metric_collector import MongoStorageMetricCollector
 from . import ApiKey, keygenerator
-from .. import mongo_client_factory
 
 
 class MongoKeyGenerator(keygenerator.KeyGenerator):

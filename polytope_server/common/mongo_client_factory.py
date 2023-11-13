@@ -1,6 +1,7 @@
-import pymongo
-import urllib.parse
 import typing
+import urllib.parse
+
+import pymongo
 
 
 def create_client(
