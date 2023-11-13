@@ -32,6 +32,7 @@ import pymemcache
 import pymongo
 import redis
 
+from .. import mongo_client_factory
 from ..metric import MetricType
 from ..metric_collector import (
     DictStorageMetricCollector,
@@ -197,9 +198,12 @@ class MongoDBCaching(Caching):
         super().__init__(cache_config)
         host = cache_config.get("host", "localhost")
         port = cache_config.get("port", 27017)
+        username = config.get("username")
+        password = config.get("password")
+        tls = config.get("tls", False) == True
         endpoint = "{}:{}".format(host, port)
         collection = cache_config.get("collection", "cache")
-        self.client = pymongo.MongoClient(host + ":" + str(port), journal=False, connect=False)
+        self.client = mongo_client_factory.create_client(host, port, username, password, tls)
         self.database = self.client.cache
         self.collection = self.database[collection]
         self.collection.create_index("expire_at", expireAfterSeconds=0)
