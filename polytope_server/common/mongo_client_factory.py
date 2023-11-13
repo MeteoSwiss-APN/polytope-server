@@ -11,11 +11,11 @@ def create_client(
     password: typing.Optional[str] = None,
     tls: bool = False,
 ) -> pymongo.MongoClient:
-    endpoint = f"{host}:{port}"
+    endpoint = f"mongodb://{host}:{port}"
 
     if username and password:
         encoded_username = urllib.parse.quote_plus(username)
         encoded_password = urllib.parse.quote_plus(password)
-        endpoint = f"{encoded_username}:{encoded_password}@{endpoint}"
+        endpoint = f"mongodb://{encoded_username}:{encoded_password}@{host}:{port}"
 
     return pymongo.MongoClient(endpoint, journal=True, connect=False, tls=tls)

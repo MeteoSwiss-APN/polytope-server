@@ -34,5 +34,5 @@ def test_create_with_credentials_tls(mock_mongo: mock.Mock):
 def _verify(mock_mongo: mock.Mock, endpoint: str, tls: bool):
     mock_mongo.assert_called_once()
     args, kwargs = mock_mongo.call_args
-    assert args[0] == endpoint
+    assert args[0] == f"mongodb://{endpoint}"
     assert kwargs["tls"] == tls
