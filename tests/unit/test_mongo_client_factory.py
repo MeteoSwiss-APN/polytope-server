@@ -1,30 +1,30 @@
 from unittest import mock
 
-from ...polytope_server.common import mongo_client_factory
+from polytope_server.common import mongo_client_factory
 
 
-@mock.patch("polytope_server.common.mongo_client.pymongo.MongoClient", autospec=True)
+@mock.patch("polytope_server.common.mongo_client_factory.pymongo.MongoClient", autospec=True)
 def test_create_without_credentials(mock_mongo: mock.Mock):
     mongo_client_factory.create_client("host", "123", username=None, password=None, tls=False)
 
     _verify(mock_mongo, "host:123", False)
 
 
-@mock.patch("polytope_server.common.mongo_client.pymongo.MongoClient", autospec=True)
+@mock.patch("polytope_server.common.mongo_client_factory.pymongo.MongoClient", autospec=True)
 def test_create_with_credentials(mock_mongo: mock.Mock):
     mongo_client_factory.create_client("host", "123", username="admin", password="admin", tls=False)
 
     _verify(mock_mongo, "admin:admin@host:123", False)
 
 
-@mock.patch("polytope_server.common.mongo_client.pymongo.MongoClient", autospec=True)
+@mock.patch("polytope_server.common.mongo_client_factory.pymongo.MongoClient", autospec=True)
 def test_create_without_credentials_tls(mock_mongo: mock.Mock):
     mongo_client_factory.create_client("host", "123", username=None, password=None, tls=True)
 
     _verify(mock_mongo, "host:123", True)
 
 
-@mock.patch("polytope_server.common.mongo_client.pymongo.MongoClient", autospec=True)
+@mock.patch("polytope_server.common.mongo_client_factory.pymongo.MongoClient", autospec=True)
 def test_create_with_credentials_tls(mock_mongo: mock.Mock):
     mongo_client_factory.create_client("host", "123", username="admin", password="admin", tls=True)
 
