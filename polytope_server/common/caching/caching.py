@@ -29,7 +29,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Union
 
 import pymemcache
-import pymongo
 import redis
 
 from .. import mongo_client_factory
@@ -198,9 +197,9 @@ class MongoDBCaching(Caching):
         super().__init__(cache_config)
         host = cache_config.get("host", "localhost")
         port = cache_config.get("port", 27017)
-        username = config.get("username")
-        password = config.get("password")
-        tls = config.get("tls", False) == True
+        username = cache_config.get("username")
+        password = cache_config.get("password")
+        tls = cache_config.get("tls", False) == True
         endpoint = "{}:{}".format(host, port)
         collection = cache_config.get("collection", "cache")
         self.client = mongo_client_factory.create_client(host, port, username, password, tls)
@@ -224,7 +223,6 @@ class MongoDBCaching(Caching):
         return obj["data"]
 
     def set(self, key, object, lifetime):
-
         if lifetime == 0 or lifetime is None:
             expiry = datetime.datetime.max
         else:
@@ -328,7 +326,6 @@ class cache(object):
 
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-
             cache.cancelled = False
 
             if self.cache is None:
