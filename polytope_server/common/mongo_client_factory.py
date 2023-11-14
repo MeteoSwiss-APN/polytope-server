@@ -10,6 +10,7 @@ def create_client(
     username: typing.Optional[str] = None,
     password: typing.Optional[str] = None,
     tls: bool = False,
+    tlsCAFile: typing.Optional[str] = None,
 ) -> pymongo.MongoClient:
     endpoint = f"mongodb://{host}:{port}"
 
@@ -18,4 +19,4 @@ def create_client(
         encoded_password = urllib.parse.quote_plus(password)
         endpoint = f"mongodb://{encoded_username}:{encoded_password}@{host}:{port}"
 
-    return pymongo.MongoClient(endpoint, journal=True, connect=False, tls=tls)
+    return pymongo.MongoClient(endpoint, journal=True, connect=False, tls=tls, tlsCAFile=tlsCAFile)

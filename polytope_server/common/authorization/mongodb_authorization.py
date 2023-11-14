@@ -34,9 +34,10 @@ class MongoDBAuthorization(authorization.Authorization):
         username = config.get("username")
         password = config.get("password")
         tls = config.get("tls", False) == True
+        tlsCAFile = config.get("tlsCAFile", None)
 
         endpoint = "{}:{}".format(self.host, self.port)
-        self.mongo_client = mongo_client_factory.create_client(self.host, self.port, username, password, tls)
+        self.mongo_client = mongo_client_factory.create_client(self.host, self.port, username, password, tls, tlsCAFile)
         self.database = self.mongo_client.authentication
         self.users = self.database[self.collection]
 
