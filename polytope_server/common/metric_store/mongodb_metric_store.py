@@ -45,12 +45,13 @@ class MongoMetricStore(MetricStore):
 
         username = config.get("username")
         password = config.get("password")
-        tls = config.get("tls", False) == True
+        srv = True if config.get("srv", False) else False
+        tls = True if config.get("tls", False) else False
         tlsCAFile = config.get("tlsCAFile", None)
 
         endpoint = "{}:{}".format(host, port)
 
-        self.mongo_client = mongo_client_factory.create_client(host, port, username, password, tls, tlsCAFile)
+        self.mongo_client = mongo_client_factory.create_client(host, port, username, password, srv, tls, tlsCAFile)
         self.database = self.mongo_client.metric_storeg
         self.store = self.database[metric_collection]
 
