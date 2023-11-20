@@ -45,8 +45,8 @@ class MongoMetricStore(MetricStore):
 
         username = config.get("username")
         password = config.get("password")
-        srv = True if config.get("srv", False) else False
-        tls = True if config.get("tls", False) else False
+        srv = bool(config.get("srv", False))
+        tls = bool(config.get("tls", False))
         tlsCAFile = config.get("tlsCAFile", None)
 
         endpoint = "{}:{}".format(host, port)

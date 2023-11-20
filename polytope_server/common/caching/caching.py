@@ -199,8 +199,8 @@ class MongoDBCaching(Caching):
         port = cache_config.get("port", 27017)
         username = cache_config.get("username")
         password = cache_config.get("password")
-        srv = True if cache_config.get("srv", False) else False
-        tls = True if cache_config.get("tls", False) else False
+        srv = bool(cache_config.get("srv", False))
+        tls = bool(cache_config.get("tls", False))
         tlsCAFile = cache_config.get("tlsCAFile", None)
         endpoint = "{}:{}".format(host, port)
         collection = cache_config.get("collection", "cache")
