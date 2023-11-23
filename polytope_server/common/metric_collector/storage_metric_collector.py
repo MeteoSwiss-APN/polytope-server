@@ -94,8 +94,6 @@ class MongoStorageMetricCollector(StorageMetricCollector):
         self.collection = collection
         self.store = getattr(self.client, database)[collection]
 
-        self.client
-
     def collect(self):
         r = super().collect()
         m = MongoStorageInfo(

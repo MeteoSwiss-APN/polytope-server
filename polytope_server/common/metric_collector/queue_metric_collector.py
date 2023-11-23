@@ -54,4 +54,7 @@ class SQSQueueMetricCollector(QueueMetricCollector):
         self.message_counts = None
 
     def total_queued(self):
-        return sum(self.message_counts.values())
+        if self.message_counts:
+            return sum(map(lambda v: int(v), self.message_counts.values()))
+
+        return 0
