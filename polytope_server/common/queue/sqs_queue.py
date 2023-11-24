@@ -31,6 +31,7 @@ class SQSQueue(queue.Queue):
             QueueUrl=self.queue_url,
             VisibilityTimeout=self.visibility_timeout,  # If processing takes more seconds, message will be read twice
             MaxNumberOfMessages=1,
+            WaitTimeSeconds=20,
         )
         if "Messages" not in response:
             return None
