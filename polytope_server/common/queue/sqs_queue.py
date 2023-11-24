@@ -15,9 +15,9 @@ class SQSQueue(queue.Queue):
         self.visibility_timeout = config.get("visibility_timeout", 120)
         self.message_group_id = config.get("message_group_id", "polytope")
 
-        logging.getLogger("botocore").setLevel(logging.WARNING)
-        logging.getLogger("boto3").setLevel(logging.WARNING)
-        logging.getLogger("sqs").setLevel(logging.WARNING)
+        for name in logging.Logger.manager.loggerDict.keys():
+            if ("sqs" in name) or ("boto3" in name) or ("botocore" in name):
+                logging.getLogger(name).setLevel(logging.WARNING)
 
         self.client = boto3.client("sqs", region_name=region)
 
