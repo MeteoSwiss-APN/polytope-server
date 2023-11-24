@@ -14,7 +14,7 @@ class SQSQueue(queue.Queue):
         self.keep_alive_interval = config.get("keep_alive_interval", 60)
         self.visibility_timeout = config.get("visibility_timeout", 120)
         self.message_group_id = config.get("message_group_id", "polytope")
-       
+
         logging.getLogger("sqs").setLevel(logging.WARNING)
         logging.getLogger("boto3").setLevel(logging.WARNING)
         logging.getLogger("botocore").setLevel(logging.WARNING)
