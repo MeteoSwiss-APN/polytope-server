@@ -16,7 +16,8 @@ class SQSQueue(queue.Queue):
         self.message_group_id = config.get("message_group_id", "polytope")
 
         for name in logging.Logger.manager.loggerDict.keys():
-            if ("sqs" in name) or ("boto3" in name):
+            print(f"Logger: {name}")
+            if ("sqs" in name) or ("boto3" in name) or ("botocore" in name):
                 logging.getLogger(name).setLevel(logging.WARNING)
 
         self.client = boto3.client("sqs", region_name=region)
