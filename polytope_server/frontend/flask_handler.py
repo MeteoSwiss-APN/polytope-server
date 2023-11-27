@@ -49,10 +49,12 @@ class FlaskHandler(frontend.FrontendHandler):
         collections,
         identity,
         apikeygenerator,
+        proxy_support: bool,
     ):
         handler = Flask(__name__)
 
-        handler.wsgi_app = ProxyFix(handler.wsgi_app, x_for=1, x_proto=1, x_host=1)
+        if proxy_support:
+            handler.wsgi_app = ProxyFix(handler.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
         openapi_spec = "static/openapi.yaml"
         spec_path = pathlib.Path(__file__).parent.absolute() / openapi_spec
