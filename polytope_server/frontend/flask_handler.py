@@ -29,6 +29,7 @@ import yaml
 from flask import Flask, request
 from flask_swagger_ui import get_swaggerui_blueprint
 from werkzeug.exceptions import default_exceptions
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from ..common.exceptions import BadRequest, ForbiddenRequest, HTTPException, NotFound
 from ..version import __version__
@@ -36,8 +37,6 @@ from . import frontend
 from .common.application_server import GunicornServer
 from .common.data_transfer import DataTransfer
 from .common.flask_decorators import RequestSucceeded
-
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 class FlaskHandler(frontend.FrontendHandler):
