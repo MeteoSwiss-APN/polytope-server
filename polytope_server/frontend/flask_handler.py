@@ -37,6 +37,8 @@ from .common.application_server import GunicornServer
 from .common.data_transfer import DataTransfer
 from .common.flask_decorators import RequestSucceeded
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 
 class FlaskHandler(frontend.FrontendHandler):
     def create_handler(
@@ -49,6 +51,8 @@ class FlaskHandler(frontend.FrontendHandler):
         apikeygenerator,
     ):
         handler = Flask(__name__)
+
+        handler.wsgi_app = ProxyFix(handler.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
         openapi_spec = "static/openapi.yaml"
         spec_path = pathlib.Path(__file__).parent.absolute() / openapi_spec
@@ -249,7 +253,6 @@ class FlaskHandler(frontend.FrontendHandler):
         return handler
 
     def run_server(self, handler, server_type, host, port):
-
         if server_type == "flask":
             # flask internal server for non-production environments
             # should only be used for testing and debugging
