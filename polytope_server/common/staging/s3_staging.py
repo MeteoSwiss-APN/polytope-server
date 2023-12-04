@@ -27,8 +27,10 @@
 #
 #######################################################################
 
+from datetime import timedelta
 import json
 import logging
+import timeit
 
 import minio
 from minio import Minio
@@ -71,6 +73,7 @@ class S3Staging(staging.Staging):
         )
 
     def create(self, name, data, content_type):
+        start = timeit.default_timer()
         url = self.get_url(name)
         logging.info("Putting to staging: {}".format(name))
 
@@ -126,9 +129,17 @@ class S3Staging(staging.Staging):
             self.client._complete_multipart_upload(self.bucket, name, upload_id, parts)
         except Exception:
             self.client._remove_incomplete_upload(self.bucket, name, upload_id)
+            end = timeit.default_timer()
+            logging.info(
+                f"PERF_TIME upload request_id, seconds, size: {name},{timedelta(seconds=(end-start)).total_seconds()},{total_size}"
+            )
             raise
 
         logging.info("Put to {}".format(url))
+        end = timeit.default_timer()
+        logging.info(
+            f"PERF_TIME upload request_id, seconds, size: {name},{timedelta(seconds=(end-start)).total_seconds()},{total_size}"
+        )
         return url
 
     def read(self, name):
