@@ -250,7 +250,9 @@ class Worker:
             request.user_message += "Failed to finalize request"
             logging.exception("Failed to finalize request", extra={"request_id": id})
             end = timeit.default_timer()
-            logging.info(f"TIME: {timedelta(seconds=(end-start)).total_seconds()}")
+            logging.info(
+                f"PERF_TIME request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds()}"
+            )
             raise
 
         # Guarantee destruction of the datasource
@@ -265,7 +267,7 @@ class Worker:
             request.user_message += "Success"
 
         end = timeit.default_timer()
-        logging.info(f"PERF_TIME: {timedelta(seconds=(end-start)).total_seconds()}")
+        logging.info(f"PERF_TIME request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds()}")
 
         return
 
