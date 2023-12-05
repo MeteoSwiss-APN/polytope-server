@@ -13,7 +13,6 @@ class SQSQueue(queue.Queue):
         region = config.get("region")
         self.keep_alive_interval = config.get("keep_alive_interval", 60)
         self.visibility_timeout = config.get("visibility_timeout", 120)
-        self.message_group_id = config.get("message_group_id", "polytope")
 
         logging.getLogger("sqs").setLevel(logging.WARNING)
         logging.getLogger("boto3").setLevel(logging.WARNING)
@@ -26,9 +25,7 @@ class SQSQueue(queue.Queue):
         self.queue_metric_collector = SQSQueueMetricCollector(self.queue_url, self.client)
 
     def enqueue(self, message):
-        self.client.send_message(
-            QueueUrl=self.queue_url, MessageBody=json.dumps(message.body), MessageGroupId=self.message_group_id
-        )
+        self.client.send_message(QueueUrl=self.queue_url, MessageBody=json.dumps(message.body))
 
     def dequeue(self):
         response = self.client.receive_message(
