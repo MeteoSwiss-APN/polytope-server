@@ -130,15 +130,17 @@ class S3Staging(staging.Staging):
         except Exception:
             self.client._remove_incomplete_upload(self.bucket, name, upload_id)
             end = timeit.default_timer()
+            delta = timedelta(seconds=(end - start)).total_seconds()
             logging.info(
-                f"PERF_TIME upload request_id, seconds, size: {name},{timedelta(seconds=(end-start)).total_seconds()},{total_size}"
+                f"PERF_TIME fdb+s3 request_id, seconds, size, MB/s: {name},{delta:.4f},{total_size},{(total_size/1024/1024/delta):.2f}"
             )
             raise
 
         logging.info("Put to {}".format(url))
         end = timeit.default_timer()
+        delta = timedelta(seconds=(end - start)).total_seconds()
         logging.info(
-            f"PERF_TIME upload request_id, seconds, size: {name},{timedelta(seconds=(end-start)).total_seconds()},{total_size}"
+            f"PERF_TIME fdb+s3 request_id, seconds, size, MB/s: {name},{delta:.4f},{total_size},{(total_size/1024/1024/delta):.2f}"
         )
         return url
 

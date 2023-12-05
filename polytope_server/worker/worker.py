@@ -251,7 +251,7 @@ class Worker:
             logging.exception("Failed to finalize request", extra={"request_id": id})
             end = timeit.default_timer()
             logging.info(
-                f"PERF_TIME retrieve request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds()}"
+                f"PERF_TIME worker request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds():.4f}"
             )
             raise
 
@@ -268,7 +268,7 @@ class Worker:
 
         end = timeit.default_timer()
         logging.info(
-            f"PERF_TIME retrieve request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds()}"
+            f"PERF_TIME worker request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds():.4f}"
         )
 
         return
