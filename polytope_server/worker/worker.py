@@ -25,7 +25,6 @@ import sys
 import time
 import timeit
 from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta
 
 import requests
 
@@ -209,6 +208,7 @@ class Worker:
 
             self.update_metric()
 
+    @perf_time
     def process_request(self, request):
         """Entrypoint for the worker thread."""
         start = timeit.default_timer()
@@ -249,10 +249,6 @@ class Worker:
         except Exception:
             request.user_message += "Failed to finalize request"
             logging.exception("Failed to finalize request", extra={"request_id": id})
-            end = timeit.default_timer()
-            logging.info(
-                f"PERF_TIME worker request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds():.4f}"
-            )
             raise
 
         # Guarantee destruction of the datasource
@@ -267,9 +263,7 @@ class Worker:
             request.user_message += "Success"
 
         end = timeit.default_timer()
-        logging.info(
-            f"PERF_TIME worker request_id, seconds: {request.id},{timedelta(seconds=(end-start)).total_seconds():.4f}"
-        )
+        logging.info(f"PERF_TIME worker request_id, elapsed [s]: {request.id},{(end-start):.4f}")
 
         return
 
