@@ -51,8 +51,8 @@ class PolytopeDataSource(datasource.DataSource):
 
         self.check_schema()
 
-        os.environ["FDB5_CONFIG"] = json.dumps(self.fdb_config)
-        os.environ["FDB5_HOME"] = self.config.get("fdb_home", "/opt/fdb-gribjump")
+        # os.environ["FDB5_CONFIG"] = json.dumps(self.fdb_config)
+        # os.environ["FDB5_HOME"] = self.config.get("fdb_home", "/opt/fdb-gribjump")
         # forced change
 
         if "spaces" in self.fdb_config:
