@@ -52,8 +52,8 @@ class PolytopeDataSource(datasource.DataSource):
 
         self.check_schema()
 
-        os.environ["FDB5_CONFIG"] = json.dumps(self.fdb_config)
-        os.environ["FDB5_HOME"] = self.config.get("fdb_home", "/opt/fdb-gribjump")
+        # os.environ["FDB5_CONFIG"] = json.dumps(self.fdb_config)
+        # os.environ["FDB5_HOME"] = self.config.get("fdb_home", "/opt/fdb-gribjump")
         # forced change
 
         if "spaces" in self.fdb_config:
@@ -71,11 +71,19 @@ class PolytopeDataSource(datasource.DataSource):
 
         # Set up polytope feature extraction library
         self.polytope_options = {
-            "values": {"mapper": {"type": "octahedral", "resolution": 1280, "axes": ["latitude", "longitude"]}},
+            "values": {
+                "mapper": {
+                    "type": "local_regular",
+                    "resolution": [619, 1366],
+                    "axes": ["latitude", "longitude"],
+                    "local": [42.123793, 50.389763, -0.672694, 17.552436],
+                }
+            },
             "date": {"merge": {"with": "time", "linkers": ["T", "00"]}},
             "step": {"type_change": "int"},
             "number": {"type_change": "int"},
             "longitude": {"cyclic": [0, 360]},
+            "levelist": {"type_change": "int"},
         }
 
         logging.info("Set up gribjump")
