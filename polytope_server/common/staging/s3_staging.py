@@ -103,13 +103,13 @@ class S3Staging(staging.Staging):
 
         self.internal_url = ("https://" if secure else "http://") + internal_url
 
-        try:
-            self.client.make_bucket(self.bucket)
-            self.client.set_bucket_policy(self.bucket, self.bucket_policy())
-        except BucketAlreadyExists:
-            pass
-        except BucketAlreadyOwnedByYou:
-            pass
+        # try:
+        #     self.client.make_bucket(self.bucket)
+        #     self.client.set_bucket_policy(self.bucket, self.bucket_policy())
+        # except BucketAlreadyExists:
+        #     pass
+        # except BucketAlreadyOwnedByYou:
+        #     pass
 
         self.storage_metric_collector = S3StorageMetricCollector(endpoint, self.client, self.bucket, self.get_type())
 
