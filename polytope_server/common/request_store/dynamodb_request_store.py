@@ -20,37 +20,48 @@
 
 import datetime as dt
 import logging
-from functools import partial, reduce
-from typing import NamedTuple
+from functools import reduce
 
-import boto3
-import botocore
-import pydantic
+import botocore.exceptions
 from boto3.dynamodb.conditions import And, Attr, Key
 
 from .. import metric_store
 from ..metric import MetricType, RequestStatusChange
 from ..request import Request
 from . import request_store
+from . import boto3_session
 
 
 logger = logging.getLogger(__name__)
 
 
-class Config(pydantic.BaseModel):
-    endpoint_url: str
-    table_name: str
-
-
-def _iter_items(fn):
-    start_key = None
-    while True:
-        response = fn(ExclusiveStartKey=start_key)
+def _iter_items(fn, **params):
+    while True: 
+        response = fn(**params)
         for item in response["Items"]:
             yield item
-        start_key = response.get("LastEvaluatedKey")
-        if start_key is None:
+        if "LastEvaluatedKey" not in response:
             break
+        params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+
+
+def _make_query(**kwargs):
+    query = {}
+    for k, v in kwargs.items():
+        if k not in Request.__slots__:
+            raise KeyError("Request has no key {}".format(k))
+
+        if v is None:
+            continue
+
+        sub_doc_id = getattr(v, "id", None)
+        if sub_doc_id is not None:
+            query[k + ".id"] = sub_doc_id
+            continue
+
+        query[k] = Request.serialize_slot(k, v)
+
+    return query
 
 
 class DynamoDBRequestStore(request_store.RequestStore):
@@ -60,10 +71,30 @@ class DynamoDBRequestStore(request_store.RequestStore):
             config = {}
 
         endpoint_url = config.get("endpoint_url")
-        table_name = config.get("table_name")
+        table_name = config.get("table_name", "requests")
 
-        dynamodb = boto3.resource("dynamodb", endpoint_url=endpoint_url)
+        session = boto3_session.build_boto_session()
+        dynamodb = session.resource("dynamodb", endpoint_url=endpoint_url)
         self.table = dynamodb.Table(table_name)
+
+        try:
+            kwargs = {
+                "AttributeDefinitions": [{"AttributeName": "id", "AttributeType": "S"}, {"AttributeName": "status", "AttributeType": "S"}],
+                "TableName": table_name,
+                "KeySchema": [{"AttributeName": "id", "KeyType": "HASH"}],
+                "GlobalSecondaryIndexes": [{
+                    "IndexName": "status-index",
+                    "KeySchema": [{"AttributeName": "status", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                }],
+                "BillingMode": "PAY_PER_REQUEST",
+            }
+            table = dynamodb.create_table(**kwargs)
+            table.wait_until_exists()
+        except dynamodb.meta.client.exceptions.ResourceInUseException:
+            pass
+        else:
+            self.table = table
 
         self.metric_store = None
         if metric_store_config is not None:
@@ -74,7 +105,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
 
     def add_request(self, request):
         try:
-            self.table.put_item(Item=request.serialize(), conditionExpression=Attr("id").notexists())
+            self.table.put_item(Item=request.serialize(), ConditionExpression=Attr("id").not_exists())
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 raise ValueError("Request already exists in request store") from e
@@ -89,23 +120,38 @@ class DynamoDBRequestStore(request_store.RequestStore):
         self.table.delete_item(Key={"id": id})
 
     def get_request(self, id):
-        self.table.query(
-            Key={"id": id},
-        )
+        response = self.table.get_item(Key={"id": id})
+        if "Item" in response:
+            return Request(from_dict=response["Item"])
 
     def get_requests(self, ascending=None, descending=None, limit=None, status=None, **kwargs):
-        filter_expr = reduce(And, (Attr(key).eq(value) for key, value in kwargs.items()))
+        if ascending is not None and descending is not None:
+            raise ValueError("Cannot sort by ascending and descending at the same time.")
+        
+        query = _make_query(**kwargs)
+        key, value = next(iter(query.items()))
+        filter_expr = Attr(key).eq(value)
         if status is not None:
-            key_cond_expr = Key("status").eq(kwargs["status"])
-            fn = partial(
-                self.table.query,
-                KeyConditionExpression=key_cond_expr,
-                FilterExpression=filter_expr,
-                Limit=limit,
-            )
+            key_cond_expr = Key("status").eq(query["status"])
+            fn = self.table.query
+            params = {
+                "IndexName": "status-index",
+                "KeyConditionExpression": key_cond_expr,
+                "FilterExpression": filter_expr,
+            }
         else:
-            fn = partial(self.table.scan, FilterExpression=filter_expr, Limit=limit)
-        return [Request(from_dict=item) for item in _iter_items(fn)]
+            fn = self.table.scan
+            params = {"FilterExpression": filter_expr}
+
+        if limit is not None:
+            params["Limit"] = limit
+
+        reqs = (Request(from_dict=item) for item in _iter_items(fn, **params))
+        if ascending:
+            return sorted(reqs, key=lambda req: getattr(req, ascending))
+        if descending:
+            return sorted(reqs, key=lambda req: getattr(req, descending), reverse=True)
+        return list(reqs)
 
     def update_request(self, request):
         request.last_modified = dt.datetime.utcnow().timestamp()
@@ -118,5 +164,5 @@ class DynamoDBRequestStore(request_store.RequestStore):
 
         self.table.delete()
 
-    def collect_metric_data(self):
+    def collect_metric_info(self):
         return {}

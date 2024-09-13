@@ -1,7 +1,7 @@
 Jinja2==3.1.1
 Flask==2.0.3
 flask-script==2.0.5
-flask-mongoengine==0.8.2
+flask-mongoengine==1.0.0
 py-bcrypt==0.4
 jsonschema==2.5.1
 pika==1.1.0
@@ -15,7 +15,7 @@ falcon==2.0.0
 falcon-jsonify==1.2
 flask-restful==0.3.7
 flask-restplus==0.12.1
-flask-wtf==0.14.2
+flask-wtf==0.14.3
 werkzeug==2.0
 gunicorn==19.9.0
 ecmwf-api-client==1.5.4
@@ -31,5 +31,5 @@ ldap3==2.7
 docker==4.2.0
 python-keycloak==0.24.0
 python-jose
-boto3==1.28.80
-pydantic
+boto3
+moto[dynamodb]
