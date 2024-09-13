@@ -32,3 +32,4 @@ docker==4.2.0
 python-keycloak==0.24.0
 python-jose
 boto3==1.28.80
+pydantic
