@@ -94,7 +94,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
         )
 
     def get_requests(self, ascending=None, descending=None, limit=None, status=None, **kwargs):
-        filter_expr = reduce(And, Attr(key).eq(value) for key, value in kwargs.items())
+        filter_expr = reduce(And, (Attr(key).eq(value) for key, value in kwargs.items()))
         if status is not None:
             key_cond_expr = Key("status").eq(kwargs["status"])
             fn = partial(
