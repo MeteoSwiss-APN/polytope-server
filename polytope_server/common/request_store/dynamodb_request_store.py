@@ -86,9 +86,10 @@ class DynamoDBRequestStore(request_store.RequestStore):
             config = {}
 
         endpoint_url = config.get("endpoint_url")
+        region = config.get("region")
         table_name = config.get("table_name", "requests")
 
-        dynamodb = boto3.resource("dynamodb", endpoint_url=endpoint_url)
+        dynamodb = boto3.resource("dynamodb", region_name=region, endpoint_url=endpoint_url)
         self.table = dynamodb.Table(table_name)
 
         try:
