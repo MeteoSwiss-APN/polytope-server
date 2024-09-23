@@ -123,7 +123,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
 
         try:
             response = dynamodb.meta.client.describe_table(TableName=table_name)
-            if response["TableStatus"] != "ACTIVE":
+            if response["Table"]["TableStatus"] != "ACTIVE":
                 raise RuntimeError(f"DynamoDB table {table_name} is not active.")
         except dynamodb.meta.client.exceptions.ResourceNotFoundException:
             _create_table(dynamodb, table_name)
