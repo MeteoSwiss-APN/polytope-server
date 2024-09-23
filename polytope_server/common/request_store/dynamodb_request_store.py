@@ -78,6 +78,35 @@ def _dump(request):
         return item | {"user_id": str(request.user.id)}
     return item
 
+def _create_table(dynamodb, table_name):
+    try:
+        kwargs = {
+            "AttributeDefinitions": [
+                {"AttributeName": "id", "AttributeType": "S"},
+                {"AttributeName": "status", "AttributeType": "S"},
+                {"AttributeName": "user_id", "AttributeType": "S"},
+            ],
+            "TableName": table_name,
+            "KeySchema": [{"AttributeName": "id", "KeyType": "HASH"}],
+            "GlobalSecondaryIndexes": [
+                {
+                    "IndexName": "status-index",
+                    "KeySchema": [{"AttributeName": "status", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                },
+                {
+                    "IndexName": "user-index",
+                    "KeySchema": [{"AttributeName": "user_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                },
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+        }
+        table = dynamodb.create_table(**kwargs)
+        table.wait_until_exists()
+    except dynamodb.meta.client.exceptions.ResourceInUseException:
+        pass
+
 
 class DynamoDBRequestStore(request_store.RequestStore):
 
@@ -93,34 +122,11 @@ class DynamoDBRequestStore(request_store.RequestStore):
         self.table = dynamodb.Table(table_name)
 
         try:
-            kwargs = {
-                "AttributeDefinitions": [
-                    {"AttributeName": "id", "AttributeType": "S"},
-                    {"AttributeName": "status", "AttributeType": "S"},
-                    {"AttributeName": "user_id", "AttributeType": "S"},
-                ],
-                "TableName": table_name,
-                "KeySchema": [{"AttributeName": "id", "KeyType": "HASH"}],
-                "GlobalSecondaryIndexes": [
-                    {
-                        "IndexName": "status-index",
-                        "KeySchema": [{"AttributeName": "status", "KeyType": "HASH"}],
-                        "Projection": {"ProjectionType": "ALL"},
-                    },
-                    {
-                        "IndexName": "user-index",
-                        "KeySchema": [{"AttributeName": "user_id", "KeyType": "HASH"}],
-                        "Projection": {"ProjectionType": "ALL"},
-                    },
-                ],
-                "BillingMode": "PAY_PER_REQUEST",
-            }
-            table = dynamodb.create_table(**kwargs)
-            table.wait_until_exists()
-        except dynamodb.meta.client.exceptions.ResourceInUseException:
-            pass
-        else:
-            self.table = table
+            response = dynamodb.meta.client.describe_table(TableName=table_name)
+            if response["TableStatus"] != "ACTIVE":
+                raise RuntimeError(f"DynamoDB table {table_name} is not active.")
+        except dynamodb.meta.client.exceptions.ResourceNotFoundException:
+            _create_table(dynamodb, table_name)
 
         self.metric_store = None
         if metric_store_config is not None:
