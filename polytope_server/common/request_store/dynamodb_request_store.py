@@ -63,7 +63,13 @@ def _make_query(**kwargs):
 
 
 def _load(item):
-    return Request(from_dict={key: value for key, value in item.items() if key != "user_id"})
+    return Request(
+        from_dict={
+            key: float(value) if isinstance(value, Decimal) else value
+            for key, value in item.items()
+            if key != "user_id"
+        }
+    )
 
 
 def _dump(request):
@@ -147,7 +153,6 @@ class DynamoDBRequestStore(request_store.RequestStore):
         if ascending is not None and descending is not None:
             raise ValueError("Cannot sort by ascending and descending at the same time.")
 
-        
         query = _make_query(**kwargs)
         if user is not None:
             key_cond_expr = Key("user_id").eq(str(user.id))
@@ -189,11 +194,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
         self.table.put_item(Item=_dump(request))
 
     def wipe(self):
-        if self.metric_store:
-            for item in _iter_items(self.table.scan):
-                self.metric_store.remove_metric(type=MetricType.REQUEST_STATUS_CHANGE, request_id=item["id"])
-
-        self.table.delete()
+        pass
 
     def collect_metric_info(self):
         return {}

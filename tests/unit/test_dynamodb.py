@@ -86,3 +86,18 @@ def test_get_requests_scan(populated):
     store, (_, r2, _), _ = populated()
     res = store.get_requests(content_length=10)
     assert res == [r2]
+
+def test_update(mocked_aws):
+    u1 = user.User("user1", "realm1")
+    r1 = request.Request(user=u1)
+    store = dynamodb_request_store.DynamoDBRequestStore()
+    store.add_request(r1)
+    r2 = store.get_request(r1.id)
+    assert r1 == r2
+
+    r2.user.attributes["test"] = "updated"
+    store.update_request(r2)
+
+    r3 = store.get_request(r1.id)
+    assert r3.id == r1.id
+    assert r3.user.attributes["test"] == "updated"
