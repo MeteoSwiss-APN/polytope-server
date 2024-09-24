@@ -78,6 +78,7 @@ def _dump(request):
         return item | {"user_id": str(request.user.id)}
     return item
 
+
 def _create_table(dynamodb, table_name):
     try:
         kwargs = {
@@ -119,18 +120,21 @@ class DynamoDBRequestStore(request_store.RequestStore):
         table_name = config.get("table_name", "requests")
 
         dynamodb = boto3.resource("dynamodb", region_name=region, endpoint_url=endpoint_url)
+        client = dynamodb.meta.client
         self.table = dynamodb.Table(table_name)
 
         try:
-            response = dynamodb.meta.client.describe_table(TableName=table_name)
+            response = client.describe_table(TableName=table_name)
             if response["Table"]["TableStatus"] != "ACTIVE":
                 raise RuntimeError(f"DynamoDB table {table_name} is not active.")
-        except dynamodb.meta.client.exceptions.ResourceNotFoundException:
+        except client.exceptions.ResourceNotFoundException:
             _create_table(dynamodb, table_name)
 
         self.metric_store = None
         if metric_store_config is not None:
             self.metric_store = metric_store.create_metric_store(metric_store_config)
+
+        logger.info("DynamoDB request store configured for table name %s.", table_name)
 
     def get_type(self):
         return "dynamodb"
@@ -149,7 +153,19 @@ class DynamoDBRequestStore(request_store.RequestStore):
         logger.info("Request ID {} status set to {}.".format(request.id, request.status))
 
     def remove_request(self, id):
-        self.table.delete_item(Key={"id": id})
+        try:
+            self.table.delete_item(Key={"id": id}, ConditionExpression=Attr("id").exists())
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                raise KeyError("Request does not exist in request store") from e
+            raise
+
+        if self.metric_store:
+            items = self.metric_store.get_metrics(request_id=id)
+            for item in items:
+                self.metric_store.remove_metric(item.uuid)
+
+        logger.info("Request ID %s removed.", id)
 
     def get_request(self, id):
         response = self.table.get_item(Key={"id": id})
@@ -200,8 +216,13 @@ class DynamoDBRequestStore(request_store.RequestStore):
         request.last_modified = now.timestamp()
         self.table.put_item(Item=_dump(request))
 
+        if self.metric_store:
+            self.metric_store.add_metric(RequestStatusChange(request_id=request.id, status=request.status))
+
+        logger.info("Request ID %s status set to %s.", request.id, request.status)
+
     def wipe(self):
-        pass
+        pass  # Not needed for unit testing against moto
 
     def collect_metric_info(self):
         return {}
