@@ -78,7 +78,10 @@ def _load(item):
 
 
 def _dump(metric):
-    return json.loads(json.dumps(metric.serialize()), parse_float=Decimal)
+    item = json.loads(json.dumps(metric.serialize()), parse_float=Decimal)
+    if "request_id" in item and item["request_id"] is None:
+        del item["request_id"]  # index hash keys are not nullable
+    return item
 
 
 def _create_table(dynamodb, table_name):
