@@ -70,22 +70,27 @@ def populated(mocked_aws):
         for req in (r1, r2, r3):
             store.add_request(req)
         return store, [r1, r2, r3], [u1, u2, u3]
+
     return func
+
 
 def test_get_requests_user(populated):
     store, (r1, *_), (u1, *_) = populated()
     res = store.get_requests(user=u1)
     assert res == [r1]
 
+
 def test_get_requests_id(populated):
     store, (*_, r3), _ = populated()
     res = store.get_requests(id=r3.id)
     assert res == [r3]
 
+
 def test_get_requests_scan(populated):
     store, (_, r2, _), _ = populated()
     res = store.get_requests(content_length=10)
     assert res == [r2]
+
 
 def test_update(mocked_aws):
     u1 = user.User("user1", "realm1")
@@ -101,3 +106,11 @@ def test_update(mocked_aws):
     r3 = store.get_request(r1.id)
     assert r3.id == r1.id
     assert r3.user.attributes["test"] == "updated"
+
+
+def test_metric_store(mocked_aws):
+    store = dynamodb_request_store.DynamoDBRequestStore(metric_store_config={"dynamodb": {"table_name": "metrics"}})
+    r1 = request.Request()
+    store.add_request(r1)
+    [m1] = store.metric_store.get_metrics()
+    assert m1.request_id == r1.id
