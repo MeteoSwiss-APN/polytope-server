@@ -70,15 +70,32 @@ def _make_query(**kwargs):
         key: value.value if isinstance(value, Enum) else value for key, value in kwargs.items() if value is not None
     }
 
+def _visit(obj, fn):
+    if isinstance(obj, dict):
+        return {key: _visit(value, fn) for key, value in obj.items()}
+    if isinstance(obj, list):
+        return [_visit(value, fn) for value in obj]
+    return fn(obj)
+
+
+def _convert_numbers(obj, reverse=False):
+    def fn(item):
+        if not reverse and isinstance(item, float):
+            return Decimal(item)
+        elif reverse and isinstance(item, Decimal):
+            return float(item)
+        return item
+    return _visit(obj, fn)
+
 
 def _load(item):
     metric_type = Metric.deserialize_slot("type", item["type"])
     cls = METRIC_TYPE_CLASS_MAP[metric_type]
-    return cls(from_dict={key: float(value) if isinstance(value, Decimal) else value for key, value in item.items()})
+    return cls(from_dict=_convert_numbers(item, reverse=True))
 
 
 def _dump(metric):
-    item = json.loads(json.dumps(metric.serialize()), parse_float=Decimal)
+    item = _convert_numbers(metric.serialize())
     if "request_id" in item and item["request_id"] is None:
         del item["request_id"]  # index hash keys are not nullable
     return item

@@ -62,18 +62,33 @@ def _make_query(**kwargs):
     return query
 
 
+def _visit(obj, fn):
+    if isinstance(obj, dict):
+        return {key: _visit(value, fn) for key, value in obj.items()}
+    if isinstance(obj, list):
+        return [_visit(value, fn) for value in obj]
+    return fn(obj)
+
+
+def _convert_numbers(obj, reverse=False):
+    def fn(item):
+        if not reverse and isinstance(item, float):
+            return Decimal(item)
+        elif reverse and isinstance(item, Decimal):
+            return float(item)
+        return item
+
+    return _visit(obj, fn)
+
+
 def _load(item):
     return Request(
-        from_dict={
-            key: float(value) if isinstance(value, Decimal) else value
-            for key, value in item.items()
-            if key != "user_id"
-        }
+        from_dict={key: _convert_numbers(value, reverse=True) for key, value in item.items() if key != "user_id"}
     )
 
 
 def _dump(request):
-    item = json.loads(json.dumps(request.serialize()), parse_float=Decimal)
+    item = _convert_numbers(request.serialize())
     if request.user is not None:
         return item | {"user_id": str(request.user.id)}
     return item
