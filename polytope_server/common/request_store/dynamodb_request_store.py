@@ -19,9 +19,9 @@
 #
 
 import datetime as dt
-import json
 import logging
 import operator
+import warnings
 from decimal import Decimal
 from functools import reduce
 
@@ -30,7 +30,7 @@ import botocore.exceptions
 from boto3.dynamodb.conditions import Attr, Key
 
 from .. import metric_store
-from ..metric import MetricType, RequestStatusChange
+from ..metric import RequestStatusChange
 from ..request import Request
 from . import request_store
 
@@ -165,7 +165,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
         if self.metric_store:
             self.metric_store.add_metric(RequestStatusChange(request_id=request.id, status=request.status))
 
-        logger.info("Request ID {} status set to {}.".format(request.id, request.status))
+        logger.info("Request ID %s status set to %s.", request.id, request.status)
 
     def remove_request(self, id):
         try:
@@ -237,7 +237,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
         logger.info("Request ID %s status set to %s.", request.id, request.status)
 
     def wipe(self):
-        pass  # Not needed for unit testing against moto
+        warnings.warn("wipe is not implemented for DynamoDBRequestStore")
 
     def collect_metric_info(self):
         return {}

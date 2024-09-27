@@ -18,9 +18,9 @@
 # does it submit to any jurisdiction.
 #
 
-import json
 import logging
 import operator
+import warnings
 from decimal import Decimal
 from enum import Enum
 from functools import reduce
@@ -201,7 +201,7 @@ class DynamoDBMetricStore(MetricStore):
         self.table.put_item(Item=_dump(metric))
 
     def wipe(self):
-        pass
+        warnings.warn("wipe is not implemented for DynamoDBMetricStore")
 
     def collect_metric_info(self):
         return {}
