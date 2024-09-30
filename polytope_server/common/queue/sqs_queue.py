@@ -12,6 +12,9 @@ class SQSQueue(queue.Queue):
     def __init__(self, config):
         queue_name = config.get("queue_name")
         region = config.get("region")
+        # endpoint_url only needed for local development
+        endpoint_url = config.get("endpoint_url")
+
         self.keep_alive_interval = config.get("keep_alive_interval", 60)
         self.visibility_timeout = config.get("visibility_timeout", 120)
 
@@ -19,7 +22,10 @@ class SQSQueue(queue.Queue):
         logging.getLogger("boto3").setLevel(logging.WARNING)
         logging.getLogger("botocore").setLevel(logging.WARNING)
 
-        self.client = boto3.client("sqs", region_name=region)
+        if endpoint_url:
+            self.client = boto3.client('sqs', endpoint_url=endpoint_url, region_name=region, use_ssl=False)
+        else:
+            self.client = boto3.client("sqs", region_name=region)
 
         self.queue_url = self.client.get_queue_url(QueueName=queue_name).get("QueueUrl")
         self.check_connection()

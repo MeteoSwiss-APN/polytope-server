@@ -24,6 +24,7 @@ import time
 from ..common import collection, queue, request_store
 from ..common.request import Status
 
+from ..common.observability.otel import restore_trace_context
 
 class Broker:
     def __init__(self, config):
@@ -75,8 +76,14 @@ class Broker:
 
             if self.check_limits(active_requests, wr):
                 assert wr.status == Status.WAITING
-                active_requests.add(wr)
-                self.enqueue(wr)
+                # Restore the trace context for this request
+                token = restore_trace_context(wr)
+                with token:
+                    active_requests.add(wr)
+                    self.enqueue(wr)
+                    # Reset the context to what it was before
+                    token.__exit__(None, None, None)
+
 
             if self.queue.count() >= self.max_queue_size:
                 logging.info("Queue is full")
