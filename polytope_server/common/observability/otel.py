@@ -5,32 +5,23 @@ import logging
 def add_trace_context(request):
         # Get the current active span
         current_span = trace.get_current_span()
-
-        # Get key context values, this ensure the proper propagation for async requests
-        # https://opentelemetry.io/docs/concepts/context-propagation
-
-        trace_id = current_span.get_span_context().trace_id
-        span_id = current_span.get_span_context().span_id
-        sampled = current_span.get_span_context().trace_flags.sampled
-
-        # Adding trace_id and span_id to the request data
+        # Add trace_id and span_id to the request data
         # We store the trace_id and span_id as strings to avoid issues with JSON serialization
         # We also store the sampled flag to propagate the sampling decision
         request.otel_trace_ctx = {
-            'trace_id': str(trace_id),
-            'span_id': str(span_id),
-            'sampled': sampled
+            'trace_id': str(current_span.get_span_context().trace_id),
+            'span_id': str(current_span.get_span_context().span_id),
+            'sampled': current_span.get_span_context().trace_flags.sampled
         }
 
-        logging.debug(f"[OTEL] Request created with trace_id: {request.otel_trace_ctx['trace_id']} and span_id: {request.otel_trace_ctx['span_id']}")
+        logging.debug(f"**** [OTEL] Request created with trace_id: {request.otel_trace_ctx['trace_id']} and span_id: {request.otel_trace_ctx['span_id']}")
 
 def restore_trace_context(request):
-    # If otel context is not set, return
+    # if request.otel_trace_ctx is not set, return
     if not hasattr(request, 'otel_trace_ctx'):
         return
 
-    logging.debug(f"[OTEL] Restoring context request with trace_id: {request.otel_trace_ctx}")
-
+    logging.debug(f"**** [OTEL] Request has trace_id: {request.otel_trace_ctx}")
     # Retrieve the trace_id and span_id from the stored request
     trace_id = int(request.otel_trace_ctx['trace_id'], 16)  # Convert hex string to int
     span_id = int(request.otel_trace_ctx['span_id'], 16)    # Convert hex string to int
