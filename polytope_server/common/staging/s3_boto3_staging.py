@@ -76,7 +76,7 @@ class S3Staging_boto3(staging.Staging):
 
         self.prefix = "https" if self.use_ssl else "http"
 
-        self._internal_url = f"http://{self.host}:{self.port}"
+        self._internal_url = f"https://{self.host}:{self.port}"
 
         # Setup Boto3 client
         self.s3_client = boto3.client(
