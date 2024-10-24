@@ -34,6 +34,9 @@ from ..common import request_store, staging
 from ..common.metric import WorkerInfo, WorkerStatusChange
 from ..common.request import Status
 
+import sentry_sdk
+sentry_sdk.init("http://976d75a268c144fe9f99537eae365b7d@localhost:8000/1")
+
 
 class Worker:
     """The worker:
