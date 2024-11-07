@@ -23,7 +23,7 @@ import time
 
 from ..common import collection, queue, request_store
 from ..common.request import Status
-
+from ..common.observability.otel import restore_trace_context, create_new_span_producer
 
 class Broker:
     def __init__(self, config):
@@ -75,8 +75,11 @@ class Broker:
 
             if self.check_limits(active_requests, wr):
                 assert wr.status == Status.WAITING
-                active_requests.add(wr)
-                self.enqueue(wr)
+                # Restore the trace context for this request
+                extracted_ctx = restore_trace_context(wr)
+                with create_new_span_producer("enqueue_message", request_id=wr.id, parent_context=extracted_ctx):
+                    active_requests.add(wr)
+                    self.enqueue(wr)
 
             if self.queue.count() >= self.max_queue_size:
                 logging.info("Queue is full")

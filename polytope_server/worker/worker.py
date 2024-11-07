@@ -33,7 +33,7 @@ from ..common import queue as polytope_queue
 from ..common import request_store, staging
 from ..common.metric import WorkerInfo, WorkerStatusChange
 from ..common.request import Status
-
+from ..common.observability.otel import restore_trace_context, create_new_span_consumer
 
 class Worker:
     """The worker:
@@ -146,37 +146,41 @@ class Worker:
                         id = self.queue_msg.body["id"]
                         self.request = self.request_store.get_request(id)
 
-                        # This occurs when a request has been revoked while it was on the queue
-                        if self.request is None:
-                            logging.info(
-                                "Request no longer exists, ignoring",
-                                extra={"request_id": id},
-                            )
-                            self.update_status("idle")
-                            self.queue.ack(self.queue_msg)
+                        # Restoring request ctx
+                        extracted_ctx = restore_trace_context(self.request)
+                        # Create a new span for enqueueing the message
+                        with create_new_span_consumer("worker_processing_request", request_id=self.request.id, parent_context=extracted_ctx):
+                            # This occurs when a request has been revoked while it was on the queue
+                            if self.request is None:
+                                logging.info(
+                                    "Request no longer exists, ignoring",
+                                    extra={"request_id": id},
+                                )
+                                self.update_status("idle")
+                                self.queue.ack(self.queue_msg)
 
-                        # Occurs if a request crashed a worker and the message gets requeued (status will be PROCESSING)
-                        # We do not want to try this request again
-                        elif self.request.status != Status.QUEUED:
-                            logging.info(
-                                "Request has unexpected status {}, setting to failed".format(self.request.status),
-                                extra={"request_id": id},
-                            )
-                            self.request.set_status(Status.FAILED)
-                            self.request_store.update_request(self.request)
-                            self.update_status("idle")
-                            self.queue.ack(self.queue_msg)
+                            # Occurs if a request crashed a worker and the message gets requeued (status will be PROCESSING)
+                            # We do not want to try this request again
+                            elif self.request.status != Status.QUEUED:
+                                logging.info(
+                                    "Request has unexpected status {}, setting to failed".format(self.request.status),
+                                    extra={"request_id": id},
+                                )
+                                self.request.set_status(Status.FAILED)
+                                self.request_store.update_request(self.request)
+                                self.update_status("idle")
+                                self.queue.ack(self.queue_msg)
 
-                        # OK, process the request
-                        else:
-                            logging.info(
-                                "Popped request from the queue, beginning worker thread.",
-                                extra={"request_id": id},
-                            )
-                            self.request.set_status(Status.PROCESSING)
-                            self.update_status("processing", request_id=self.request.id)
-                            self.request_store.update_request(self.request)
-                            self.future = self.thread_pool.submit(self.process_request, (self.request))
+                            # OK, process the request
+                            else:
+                                logging.info(
+                                    "Popped request from the queue, beginning worker thread.",
+                                    extra={"request_id": id},
+                                )
+                                self.request.set_status(Status.PROCESSING)
+                                self.update_status("processing", request_id=self.request.id)
+                                self.request_store.update_request(self.request)
+                                self.future = self.thread_pool.submit(self.process_request, (self.request))
                     else:
                         self.update_status("idle")
 
