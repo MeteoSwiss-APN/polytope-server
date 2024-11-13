@@ -23,7 +23,7 @@ import time
 
 from ..common import collection, queue, request_store
 from ..common.request import Status
-from ..common.observability.otel import restore_trace_context, create_new_span_producer
+from ..common.observability.otel import restore_trace_context, create_new_span_consumer, create_new_span_producer, update_trace_context
 
 class Broker:
     def __init__(self, config):
@@ -77,7 +77,7 @@ class Broker:
                 assert wr.status == Status.WAITING
                 # Restore the trace context for this request
                 extracted_ctx = restore_trace_context(wr)
-                with create_new_span_producer("enqueue_message", request_id=wr.id, parent_context=extracted_ctx):
+                with create_new_span_consumer("Enqueue request", request_id=wr.id, parent_context=extracted_ctx):
                     active_requests.add(wr)
                     self.enqueue(wr)
 
@@ -133,11 +133,14 @@ class Broker:
         logging.info("Queuing request", extra={"request_id": request.id})
 
         try:
-            # Must update request_store before queue, worker checks request status immediately
-            request.set_status(Status.QUEUED)
-            self.request_store.update_request(request)
-            msg = queue.Message(request.serialize())
-            self.queue.enqueue(msg)
+            with create_new_span_producer("Updating request", request_id=request.id):
+                # Must update request_store before queue, worker checks request status immediately
+                request.set_status(Status.QUEUED)
+                # Updating context for trace ctx propagation with the new span as parent
+                update_trace_context(request)
+                self.request_store.update_request(request)
+                msg = queue.Message(request.serialize())
+                self.queue.enqueue(msg)
         except Exception as e:
             # If we fail to call this, the request will be stuck (POLY-21)
             logging.info(
