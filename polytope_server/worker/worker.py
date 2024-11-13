@@ -33,7 +33,7 @@ from ..common import queue as polytope_queue
 from ..common import request_store, staging
 from ..common.metric import WorkerInfo, WorkerStatusChange
 from ..common.request import Status
-from ..common.observability.otel import restore_trace_context, create_new_span_consumer
+from ..common.observability.otel import restore_trace_context, create_new_span_consumer, create_new_span_internal, set_span_error
 
 class Worker:
     """The worker:
@@ -215,81 +215,105 @@ class Worker:
     def process_request(self, request):
         """Entrypoint for the worker thread."""
 
-        id = request.id
-        collection = self.collections[request.collection]
+        # Creating a new internal span for the full process_request block
+        with create_new_span_internal("Processing request", request.id) as process_span:
+            id = request.id
+            collection = self.collections[request.collection]
 
-        logging.info(
-            "Processing request on collection {}".format(collection.name),
-            extra={"request_id": id},
-        )
-        logging.info("Request is: {}".format(request.serialize()))
-
-        input_data = self.fetch_input_data(request.url)
-
-        # Dispatch to listed datasources for this collection until we find one that handles the request
-        datasource = None
-        for ds in collection.datasources():
             logging.info(
-                "Processing request using datasource {}".format(ds.get_type()),
+                "Processing request on collection {}".format(collection.name),
                 extra={"request_id": id},
             )
-            if ds.dispatch(request, input_data):
-                datasource = ds
-                break
+            logging.info("Request is: {}".format(request.serialize()))
 
-        # Clean up
-        try:
-            # delete input data if it exists in staging (input data can come from external URLs too)
-            if input_data is not None:
-                if self.staging.query(id):
-                    self.staging.delete(id)
+            input_data = self.fetch_input_data(request.url)
 
-            # upload result data
-            if datasource is not None:
-                request.url = self.staging.create(id, datasource.result(request), datasource.mime_type())
+            # Dispatch to listed datasources for this collection until we find one that handles the request
+            datasource = None
+            for ds in collection.datasources():
+                logging.info(
+                    "Processing request using datasource {}".format(ds.get_type()),
+                    extra={"request_id": id},
+                )
 
-        except Exception as e:
-            request.user_message += f"Failed to finalize request: [{str(type(e))}] {str(e)}"
-            logging.info(request.user_message, extra={"request_id": id})
-            logging.exception("Failed to finalize request", extra={"request_id": id, "exception": str(e)})
-            raise
+                # Creating new internal span for the datasource dispatch (calculate roundtrip time)
+                with create_new_span_internal("Datatsource_{}".format(ds.get_type())) as span_ds:
+                    if ds.dispatch(request, input_data):
+                        datasource = ds
+                        span_ds.set_attribute("polytope.datasource", ds.get_type())
+                        break
 
-        # Guarantee destruction of the datasource
-        finally:
-            if datasource is not None:
-                datasource.destroy(request)
+            # Clean up
+            try:
+                # Creating new internal span for finalizing the request process
+                with create_new_span_internal("Finalizing request", request_id=id):
+                    # delete input data if it exists in staging (input data can come from external URLs too)
+                    if input_data is not None:
+                        # New span for deleting time block
+                        with create_new_span_internal("Deleting input data", request_id=id):
+                            if self.staging.query(id):
+                                self.staging.delete(id)
 
-        if datasource is None:
-            request.user_message += "Failed to process request."
-            logging.info(request.user_message, extra={"request_id": id})
-            raise Exception("Failed to process request.")
-        else:
-            request.user_message += "Success"
+                    # upload result data
+                    if datasource is not None:
+                        # Span for uploading data
+                        with create_new_span_internal("Uploading result data", request_id=id):
+                            request.url = self.staging.create(id, datasource.result(request), datasource.mime_type())
+                            # Getting key (name + ext) from url
+                            object_id = id + ("." + request.url.split("/")[-1].split(".")[-1])
+                            # Getting data size in bytes
+                            _, size = self.staging.stat(object_id)
+                            process_span.set_attributes({
+                                "polytope.request.url": request.url,
+                                "polytope.request.size": size
+                            })
 
-        return
+            except Exception as e:
+                request.user_message += f"Failed to finalize request: [{str(type(e))}] {str(e)}"
+                logging.info(request.user_message, extra={"request_id": id})
+                logging.exception("Failed to finalize request", extra={"request_id": id, "exception": str(e)})
+                set_span_error(process_span, e)
+                raise
+
+            # Guarantee destruction of the datasource
+            finally:
+                if datasource is not None:
+                    datasource.destroy(request)
+
+            if datasource is None:
+                request.user_message += "Failed to process request."
+                logging.info(request.user_message, extra={"request_id": id})
+                set_span_error(process_span, Exception(request.user_message))
+                raise Exception("Failed to process request.")
+            else:
+                request.user_message += "Success"
+
+            return
 
     def fetch_input_data(self, url):
         """Downloads input data from external URL or staging"""
-        if url != "":
-            try:
-                response = requests.get(url, proxies=self.proxies)
-                response.raise_for_status()
-            except (
-                requests.exceptions.ConnectionError,
-                requests.exceptions.HTTPError,
-            ):
-                logging.info("Retrying requests.get without proxies after failure")
-                response = requests.get(url)
-                response.raise_for_status()
+        with create_new_span_internal("Fetching input data") as fetch_input_span:
+            if url != "":
+                try:
+                    response = requests.get(url, proxies=self.proxies)
+                    response.raise_for_status()
+                except (
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.HTTPError,
+                ):
+                    logging.info("Retrying requests.get without proxies after failure")
+                    response = requests.get(url)
+                    response.raise_for_status()
 
-            if response.status_code == 200:
-                logging.info("Downloaded data of size {} from {}".format(sys.getsizeof(response._content), url))
-                return response._content
-            else:
-                raise Exception(
-                    "Could not download data from {}, got {} : {}".format(url, response.status_code, response._content)
-                )
-        return None
+                if response.status_code == 200:
+                    logging.info("Downloaded data of size {} from {}".format(sys.getsizeof(response._content), url))
+                    return response._content
+                else:
+                    error_message = "Could not download data from {}, got {} : {}".format(url, response.status_code, response._content)
+                    set_span_error(fetch_input_span, Exception(error_message))
+                    raise Exception(error_message)
+
+            return None
 
     def on_request_complete(self, request):
         """Called when the future exits cleanly"""
