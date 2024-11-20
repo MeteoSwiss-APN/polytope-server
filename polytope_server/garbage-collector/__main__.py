@@ -18,9 +18,16 @@
 # does it submit to any jurisdiction.
 #
 
+import os
+
 from ..common import logging
 from ..common.config import ConfigParser
 from .garbage_collector import GarbageCollector
+
+if sentry_dsn := os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    sentry_sdk.init(dsn=sentry_dsn)
 
 config = ConfigParser().read()
 
