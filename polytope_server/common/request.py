@@ -57,7 +57,7 @@ class Request:
         "user_request",
         "content_length",
         "content_type",
-        "otel_trace_ctx",
+        "otel_trace",
     ]
 
     def __init__(self, from_dict=None, **kwargs):
