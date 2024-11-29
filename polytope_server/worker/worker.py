@@ -240,7 +240,7 @@ class Worker:
                 )
 
                 # Creating new internal span for the datasource dispatch (calculate roundtrip time)
-                with create_new_span_internal("Datatsource_{}".format(ds.get_type())) as span_ds:
+                with create_new_span_internal("DataSource_{}".format(ds.get_type())) as span_ds:
                     if ds.dispatch(request, input_data):
                         datasource = ds
                         request.user_message += "Datasource {} accepted request.\n".format(ds.repr())
