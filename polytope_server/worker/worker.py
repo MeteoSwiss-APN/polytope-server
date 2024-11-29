@@ -237,7 +237,7 @@ class Worker:
                 )
 
                 # Creating new internal span for the datasource dispatch (calculate roundtrip time)
-                with create_new_span_internal("Datatsource_{}".format(ds.get_type())) as span_ds:
+                with create_new_span_internal("DataSource_{}".format(ds.get_type())) as span_ds:
                     if ds.dispatch(request, input_data):
                         datasource = ds
                         span_ds.set_attribute("polytope.datasource", ds.get_type())
