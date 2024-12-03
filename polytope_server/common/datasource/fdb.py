@@ -125,11 +125,11 @@ class FDBDataSource(datasource.DataSource):
     def retrieve(self, request):
         import pyfdb
 
-        fdb = pyfdb.FDB()
+        self.fdb = pyfdb.FDB()
 
         r = yaml.safe_load(request.user_request)
         logging.info(r)
-        self.output = fdb.retrieve(r)
+        self.output = self.fdb.retrieve(r)
         return True
 
     def result(self, request):
@@ -176,7 +176,7 @@ class FDBDataSource(datasource.DataSource):
                 raise Exception("got {} : {}, but expected one of {}".format(k, r[k], v))
 
     def destroy(self, request) -> None:
-        pass
+        self.fdb = None
 
     def mime_type(self) -> str:
         return "application/x-grib"
