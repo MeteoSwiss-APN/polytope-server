@@ -51,7 +51,7 @@ class FDBDataSource(datasource.DataSource):
         os.environ["FDB_HOME"] = self.config.get("fdb_home", "/opt/fdb")
         import pyfdb
 
-        self.fdb = pyfdb.FDB()
+        pyfdb.FDB()
 
         if "spaces" in self.fdb_config:
             for space in self.fdb_config["spaces"]:
@@ -110,20 +110,26 @@ class FDBDataSource(datasource.DataSource):
         return self.type
 
     def archive(self, request):
+        import pyfdb
+
+        fdb = pyfdb.FDB()
 
         # could add a check that the request is a singular object (does not contain)
 
         # r = yaml.safe_load(request.user_request)
-        self.fdb.archive(self.input_data)
-        self.fdb.flush()
+        fdb.archive(self.input_data)
+        fdb.flush()
         self.output = None
         return True
 
     def retrieve(self, request):
+        import pyfdb
+
+        fdb = pyfdb.FDB()
 
         r = yaml.safe_load(request.user_request)
         logging.info(r)
-        self.output = self.fdb.retrieve(r)
+        self.output = fdb.retrieve(r)
         return True
 
     def result(self, request):
