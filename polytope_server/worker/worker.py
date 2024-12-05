@@ -24,7 +24,7 @@ import signal
 import sys
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 
 import requests
 
@@ -128,7 +128,7 @@ class Worker:
 
     def run(self):
 
-        self.thread_pool = ThreadPoolExecutor(1)
+        self.thread_pool = ProcessPoolExecutor(1)
 
         try:
             self.queue = polytope_queue.create_queue(self.config.get("queue"))
