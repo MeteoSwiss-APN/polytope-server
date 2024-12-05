@@ -49,9 +49,6 @@ class FDBDataSource(datasource.DataSource):
         os.environ["FDB_CONFIG"] = json.dumps(self.fdb_config)
         os.environ["FDB5_HOME"] = self.config.get("fdb_home", "/opt/fdb")
         os.environ["FDB_HOME"] = self.config.get("fdb_home", "/opt/fdb")
-        import pyfdb
-
-        pyfdb.FDB()
 
         if "spaces" in self.fdb_config:
             for space in self.fdb_config["spaces"]:
