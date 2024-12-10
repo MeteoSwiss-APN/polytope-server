@@ -89,24 +89,28 @@ def create_new_span(
 @contextmanager
 def create_new_span_internal(span_name: str, request_id: Optional[str] = None, parent_context: Optional[trace.SpanContext] = None) -> Generator[trace.Span, None, None]:
     """Creates an internal span."""
-    yield from create_new_span(span_name, request_id, parent_context, kind=SpanKind.INTERNAL)
+    with create_new_span(span_name, request_id, parent_context, kind=SpanKind.INTERNAL) as span:
+        yield span
 
 # Forcing span kind Server because of AWS representation
 @contextmanager
 def create_new_span_producer(span_name: str, request_id: Optional[str] = None, parent_context: Optional[trace.SpanContext] = None) -> Generator[trace.Span, None, None]:
     """Creates a producer span."""
-    yield from create_new_span(span_name, request_id, parent_context, kind=SpanKind.SERVER)
+    with create_new_span(span_name, request_id, parent_context, kind=SpanKind.SERVER) as span:
+        yield span
 
 # Forcing span kind Server because of AWS representation
 @contextmanager
 def create_new_span_consumer(span_name: str, request_id: Optional[str] = None, parent_context: Optional[trace.SpanContext] = None) -> Generator[trace.Span, None, None]:
     """Creates a consumer span."""
-    yield from create_new_span(span_name, request_id, parent_context, kind=SpanKind.SERVER)
+    with create_new_span(span_name, request_id, parent_context, kind=SpanKind.SERVER) as span:
+        yield span
 
 @contextmanager
 def create_new_span_server(span_name: str, request_id: Optional[str] = None, parent_context: Optional[trace.SpanContext] = None) -> Generator[trace.Span, None, None]:
     """Creates a server span."""
-    yield from create_new_span(span_name, request_id, parent_context, kind=SpanKind.SERVER)
+    with create_new_span(span_name, request_id, parent_context, kind=SpanKind.SERVER) as span:
+        yield span
 
 def set_span_error(span: trace.Span, exception: Exception) -> None:
     """
