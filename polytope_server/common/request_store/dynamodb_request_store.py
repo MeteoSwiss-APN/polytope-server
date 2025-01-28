@@ -182,7 +182,7 @@ class DynamoDBRequestStore(request_store.RequestStore):
         logger.info("Request ID %s removed.", id)
 
     def get_request(self, id):
-        response = self.table.get_item(Key={"id": id})
+        response = self.table.get_item(Key={"id": id}, ConsistentRead=True)
         if "Item" in response:
             return _load(response["Item"])
 
