@@ -251,10 +251,12 @@ class Worker:
                             # Getting key (name + ext) from url
                             object_id = id + ("." + request.url.split("/")[-1].split(".")[-1])
                             # Getting data size in bytes
-                            _, size = self.staging.stat(object_id)
+                            content_type, content_length = self.staging.stat(object_id)
+                            request.content_type = content_type
+                            request.content_length = content_length
                             process_span.set_attributes({
                                 "polytope.request.url": request.url,
-                                "polytope.request.size": size
+                                "polytope.request.size": content_length,
                             })
 
             except Exception as e:
