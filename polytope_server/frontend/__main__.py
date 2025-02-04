@@ -18,10 +18,17 @@
 # does it submit to any jurisdiction.
 #
 
+import os
+
 from ..common import logging
 from ..common.caching import cache
 from ..common.config import ConfigParser
 from .frontend import Frontend
+
+if sentry_dsn := os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    sentry_sdk.init(dsn=sentry_dsn)
 
 config = ConfigParser().read()
 

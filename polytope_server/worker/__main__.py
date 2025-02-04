@@ -18,10 +18,17 @@
 # does it submit to any jurisdiction.
 #
 
+import os
+
 import polytope_server.common.config as polytope_config
 
 from ..common import logging
 from .worker import Worker
+
+if sentry_dsn := os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+
+    sentry_sdk.init(dsn=sentry_dsn)
 
 config = polytope_config.ConfigParser().read()
 
