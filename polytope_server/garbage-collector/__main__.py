@@ -18,7 +18,7 @@
 # does it submit to any jurisdiction.
 #
 
-import main
+import os
 
 from ..common import logging
 from ..common.config import ConfigParser
