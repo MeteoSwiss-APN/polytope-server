@@ -24,7 +24,7 @@ import logging
 import uuid
 
 from .user import User
-
+from .observability.otel import add_trace_context
 
 class Status(enum.Enum):
     WAITING = "waiting"
@@ -57,6 +57,7 @@ class Request:
         "user_request",
         "content_length",
         "content_type",
+        "otel_trace",
     ]
 
     def __init__(self, from_dict=None, **kwargs):
@@ -74,6 +75,9 @@ class Request:
         self.user_request = ""
         self.content_length = None
         self.content_type = "application/octet-stream"
+
+        # Adding context for OpenTelemetry in asynchronous processing
+        add_trace_context(self)
 
         if from_dict:
             self.deserialize(from_dict)
