@@ -51,7 +51,7 @@ class Staging(ABC):
         """Initialize a data store"""
 
     @abstractmethod
-    def create(self, name: str, data: Iterator[bytes], content_type: str) -> tuple(str, str):
+    def create(self, name: str, data: Iterator[bytes], content_type: str) -> Tuple[str, str]:
         """Create new resource. If the resource already exists, update it.
         :param name: name of the resource to create
         :data: a python object
