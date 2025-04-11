@@ -262,9 +262,7 @@ class Worker:
                     if datasource is not None:
                         # Span for uploading data
                         with create_new_span_internal("Uploading result data", request_id=id):
-                            request.url = self.staging.create(id, datasource.result(request), datasource.mime_type())
-                            # Getting key (name + ext) from url
-                            object_id = id + ("." + request.url.split("/")[-1].split(".")[-1])
+                            (request.url, object_id) = self.staging.create(id, datasource.result(request), datasource.mime_type())
                             # Getting data size in bytes
                             content_type, content_length = self.staging.stat(object_id)
                             request.content_type = content_type

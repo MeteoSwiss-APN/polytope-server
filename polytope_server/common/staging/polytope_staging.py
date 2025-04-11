@@ -53,7 +53,7 @@ class PolytopeStaging(staging.Staging):
             raise Exception(
                 "Could not create resource {},returned with status code: {}".format(name, response.status_code)
             )
-        return self.get_url(name)
+        return (self.get_url(name), name)
 
     def read(self, name):
         response = requests.get(self.get_internal_url(name), headers={})

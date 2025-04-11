@@ -164,7 +164,7 @@ class S3Staging(staging.Staging):
             )
 
             logging.info(f"Successfully uploaded {name} in {len(parts)} parts.")
-            return self.get_url(name)
+            return (self.get_url(name), name)
 
         except ClientError as e:
             logging.error(f"Failed to upload {name}: {e}")

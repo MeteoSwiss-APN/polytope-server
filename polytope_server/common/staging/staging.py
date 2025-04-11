@@ -51,12 +51,13 @@ class Staging(ABC):
         """Initialize a data store"""
 
     @abstractmethod
-    def create(self, name: str, data: Iterator[bytes], content_type: str) -> str:
+    def create(self, name: str, data: Iterator[bytes], content_type: str) -> tuple(str, str):
         """Create new resource. If the resource already exists, update it.
         :param name: name of the resource to create
         :data: a python object
         :content_type: a string corresponding to the HTTP 'content-type' header
         :returns: fully-qualified URL to the resource, eg. "http://polytope.com/downloads/{name}"
+                  and the name of the object
         """
 
     @abstractmethod
