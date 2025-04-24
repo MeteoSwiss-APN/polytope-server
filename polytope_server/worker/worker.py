@@ -25,6 +25,8 @@ import sys
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import PurePosixPath
+from urllib.parse import urlparse
 
 import requests
 
@@ -265,7 +267,12 @@ class Worker:
                         with create_new_span_internal("Uploading result data", request_id=id):
                             request.url = self.staging.create(id, datasource.result(request), datasource.mime_type())
                             # Getting key (name + ext) from url
-                            object_id = id + ("." + request.url.split("/")[-1].split(".")[-1])
+                            url_path = PurePosixPath(urlparse(request.url).path)
+                            extension = url_path.suffix
+                            object_id = id
+                            if extension is not None and len(extension) > 0:
+                                object_id = request.id + extension
+
                             # Getting data size in bytes
                             content_type, content_length = self.staging.stat(object_id)
                             request.content_type = content_type
