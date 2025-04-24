@@ -23,7 +23,6 @@ from . import datasource
 
 class EchoDataSource(datasource.DataSource):
     def __init__(self, config):
-        self.config = config
         self.type = config["type"]
         assert self.type == "echo"
 

@@ -62,13 +62,6 @@ class PolytopeDataSource(datasource.DataSource):
         self.config["datacube"]["config"] = self.config_file
         os.environ["GRIBJUMP_CONFIG_FILE"] = self.config_file
 
-        # Create a temp file to store FDB config
-        self.fdb_config_file = "/tmp/fdb.yaml"
-        if "fdb_config" in config:
-            with open(self.fdb_config_file, "w") as f:
-                f.write(yaml.dump(self.config.pop("fdb_config")))
-            os.environ["FDB5_CONFIG_FILE"] = self.fdb_config_file
-
         logging.info("Set up gribjump")
 
     def get_type(self):
@@ -97,16 +90,13 @@ class PolytopeDataSource(datasource.DataSource):
         r = yaml.safe_load(request.user_request)
 
         r = coercion.Coercion.coerce(r)
+
+        r = self.apply_defaults(r)
+
         # Downstream expects MARS-like format of request
         for key in r:
             if isinstance(r[key], list):
                 r[key] = "/".join(r[key])
-
-        # Check data released
-        if SCHEDULE_READER is not None and self.obey_schedule:
-            SCHEDULE_READER.check_released_polytope_request(r)
-
-        r = self.apply_defaults(r)
 
         logging.info(r)
 
@@ -194,12 +184,16 @@ class PolytopeDataSource(datasource.DataSource):
                 if req_value not in v:
                     raise Exception("got {}: {}, not one of {}".format(k, req_value, v))
 
+        # Downstream expects MARS-like format of request
+        for key in r:
+            if isinstance(r[key], list):
+                r[key] = "/".join(r[key])
+
+        # Check data released
+        if SCHEDULE_READER is not None and self.obey_schedule:
+            SCHEDULE_READER.check_released_polytope_request(r)
+
     def destroy(self, request) -> None:
-        # delete temp files
-        if os.path.exists(self.config_file):
-            os.remove(self.config_file)
-        if os.path.exists(self.fdb_config_file):
-            os.remove(self.fdb_config_file)
         pass
 
     def repr(self):
@@ -257,9 +251,7 @@ class PolytopeDataSource(datasource.DataSource):
 
     def date_check(self, date, offset, after=False):
         """Process special match rules for DATE constraints"""
-        # if type of date is list
-        if isinstance(date, list):
-            date = "/".join(date)
+
         date = str(date)
 
         # Default date is -1
@@ -307,11 +299,14 @@ def change_grids(request, config):
         # all resolution=standard have h128
         if request["resolution"] == "standard":
             res = 128
-            return change_config_grid_res(config, res)
+            return change_config_grid(config, res)
 
         # for activity CMIP6 and experiment hist, all models except ifs-nemo have h512 and ifs-nemo has h1024
         if request["activity"] == "cmip6" and request["experiment"] == "hist":
-            res = 1024
+            if request["model"] != "ifs-nemo":
+                res = 512
+            else:
+                res = 1024
 
         # # for activity scenariomip and experiment ssp3-7.0, all models use h1024
         # if request["activity"] == "scenariomip" and request["experiment"] == "ssp3-7.0":
@@ -323,7 +318,7 @@ def change_grids(request, config):
         if request["activity"] in ["baseline", "projections", "scenariomip"]:
             res = 1024
 
-    elif request.get("dataset", None) == "extremes-dt":
+    if request.get("dataset", None) == "extremes-dt":
         if request["stream"] == "wave":
             for mappings in config["options"]["axis_config"]:
                 for sub_mapping in mappings["transformations"]:
@@ -332,18 +327,10 @@ def change_grids(request, config):
                         sub_mapping["resolution"] = 3601
             return config
 
-    elif request.get("class", None) == "ai":
-        for mappings in config["options"]["axis_config"]:
-            for sub_mapping in mappings["transformations"]:
-                if sub_mapping["name"] == "mapper":
-                    sub_mapping["resolution"] = 320
-                    sub_mapping["type"] = "reduced_gaussian"
-        return config
-
     # Only assign new resolution if it was changed here
     if res:
         # Find the mapper transformation
-        return change_config_grid_res(config, res)
+        return change_config_grid(config, res)
 
     return config
 
@@ -359,17 +346,6 @@ def change_hash(request, config):
         if request["levtype"] == "ml":
             hash = "9fed647cd1c77c03f66d8c74a4e0ad34"
             return change_config_grid_hash(config, hash)
-    if request.get("dataset", None) is None:
-        if request["stream"] == "enfo":
-            if request["class"] == "od":
-                if request["type"] == "pf":
-                    if request["param"] == "261001":
-                        hash = "6101cfb6f4671e41e5cb93fe9596065b"
-                        return change_config_grid_hash(config, hash)
-    if request.get("dataset", None) == "climate-dt":
-        if request.get("model", None) == "icon":
-            hash = "9533855ee8e38314e19aaa0434c310da"
-            return change_config_grid_hash(config, hash)
     return config
 
 
@@ -381,7 +357,7 @@ def change_config_grid_hash(config, hash):
     return config
 
 
-def change_config_grid_res(config, res):
+def change_config_grid(config, res):
     for mappings in config["options"]["axis_config"]:
         for sub_mapping in mappings["transformations"]:
             if sub_mapping["name"] == "mapper":
@@ -390,9 +366,7 @@ def change_config_grid_res(config, res):
 
 
 def unmerge_date_time_options(request, config):
-    if request.get("dataset", None) == "climate-dt" and (
-        request["feature"]["type"] == "timeseries" or request["feature"]["type"] == "polygon"
-    ):
+    if request.get("dataset", None) == "climate-dt" and request["feature"]["type"] == "timeseries":
         for mappings in config["options"]["axis_config"]:
             if mappings["axis_name"] == "date":
                 mappings["transformations"] = [{"name": "type_change", "type": "date"}]

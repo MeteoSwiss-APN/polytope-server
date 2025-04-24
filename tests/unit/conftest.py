@@ -37,7 +37,6 @@ with open(tmp.name, "w") as tf:
         "logging": {},
         "authentication": {"mongodb": {}},
         "request_store": {},
-        "staging": {},
         "testrunner": {},
         "queue": {},
         "datasources": {},
