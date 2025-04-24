@@ -57,6 +57,8 @@ class MARSDataSource(datasource.DataSource):
 
         self.protocol = config.get("protocol", "dhs")
 
+        self.mars_error_filter = config.get("mars_error_filter", "mars - EROR")
+
         # self.fdb_config = None
         self.fdb_config = config.get("fdb_config", [{}])
         if self.protocol == "remote":
@@ -90,6 +92,9 @@ class MARSDataSource(datasource.DataSource):
     def match(self, request):
 
         r = yaml.safe_load(request.user_request) or {}
+
+        if "feature" in r:
+            raise Exception("Feature requests are not supported by MARS data source")
 
         for k, v in self.match_rules.items():
 
@@ -150,13 +155,15 @@ class MARSDataSource(datasource.DataSource):
         # Poll until the FIFO has been opened by MARS, watch in case the spawned process dies before opening the FIFO
         try:
             while self.subprocess.running():
+                self.subprocess.read_output(request, self.mars_error_filter)
+                # logging.debug("Checking if MARS process has opened FIFO.")  # this floods the logs
                 if self.fifo.ready():
-                    logging.debug("FIFO is ready for reading.")
+                    logging.info("FIFO is ready for reading.")
                     break
             else:
-                logging.debug("Detected MARS process has exited before opening FIFO.")
+                logging.info("Detected MARS process has exited before opening FIFO.")
                 self.destroy(request)
-                raise Exception("MARS process exited before opening FIFO.")
+                raise Exception("MARS process exited before returning data.")
         except Exception as e:
             logging.error(f"Error while waiting for MARS process to open FIFO: {e}.")
             self.destroy(request)
@@ -168,12 +175,14 @@ class MARSDataSource(datasource.DataSource):
 
         # The FIFO will get EOF if MARS exits unexpectedly, so we will break out of this loop automatically
         for x in self.fifo.data():
+            # logging.debug("Yielding data from FIFO.")  # this floods the logs
+            self.subprocess.read_output(request, self.mars_error_filter)
             yield x
 
         logging.info("FIFO reached EOF.")
 
         try:
-            self.subprocess.finalize(request)
+            self.subprocess.finalize(request, self.mars_error_filter)
         except CalledProcessError as e:
             logging.error("MARS subprocess failed: {}".format(e))
             raise Exception("MARS retrieval failed unexpectedly with error code {}".format(e.returncode))
@@ -182,7 +191,7 @@ class MARSDataSource(datasource.DataSource):
 
     def destroy(self, request):
         try:
-            self.subprocess.finalize(request)  # Will raise if non-zero return
+            self.subprocess.finalize(request, self.mars_error_filter)  # Will raise if non-zero return
         except Exception as e:
             logging.info("MARS subprocess failed: {}".format(e))
             pass

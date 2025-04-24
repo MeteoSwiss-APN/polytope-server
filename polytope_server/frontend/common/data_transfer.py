@@ -20,6 +20,8 @@
 
 import hashlib
 import sys
+from pathlib import PurePosixPath
+from urllib.parse import urlparse
 
 # TODO: Remove flask from this module, it should be agnostic
 from flask import Response
@@ -130,6 +132,20 @@ class DataTransfer:
         return RequestAccepted(response)
 
     def process_download(self, request):
+        try:
+
+            # TODO: temporary fix for Content-Disposition earthkit issues
+            url_path = PurePosixPath(urlparse(request.url).path)
+            extension = url_path.suffix
+
+            object_id = request.id
+            if extension is not None and len(extension) > 0:
+                object_id = request.id + extension
+
+            request.content_type, request.content_length = self.staging.stat(object_id)
+        except Exception:
+            raise ServerError("Error while querying data staging with {}".format(object_id))
+
         response = self.construct_response(request)
         return RequestRedirected(response)
 
