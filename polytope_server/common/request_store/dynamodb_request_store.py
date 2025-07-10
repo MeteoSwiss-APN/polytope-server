@@ -288,6 +288,10 @@ class DynamoDBRequestStore(request_store.RequestStore):
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 raise NotFound("Request {} not found in request store".format(request.id)) from e
+            logger.exception("Failed to put request: %s", repr(_dump(request)))
+            raise
+        except:
+            logger.exception("Failed to put request: %s", repr(_dump(request)))
             raise
 
         if self.metric_store:
