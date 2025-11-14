@@ -147,7 +147,7 @@ class Broker:
                 "Failed to queue, error: {}".format(repr(e)),
                 extra={"request_id": request.id},
             )
-            request.set_status(Status.WAITING)
+            request.set_status(Status.FAILED)
             self.request_store.update_request(request)
         else:
             logging.info("Queued request", extra={"request_id": request.id})
