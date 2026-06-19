@@ -63,7 +63,7 @@ class FlaskHandler(frontend.FrontendHandler):
         instrumentor.instrument_app(handler, excluded_urls="/api/v1/test")
 
         if proxy_support:
-            handler.wsgi_app = ProxyFix(handler.wsgi_app, x_for=1, x_proto=1, x_host=1)
+            handler.wsgi_app = ProxyFix(handler.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
         openapi_spec = "static/openapi.yaml"
         spec_path = pathlib.Path(__file__).parent.absolute() / openapi_spec
