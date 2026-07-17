@@ -71,9 +71,8 @@ class FlaskHandler(frontend.FrontendHandler):
         @handler.route("/api/v1/openapi.yaml")
         def openapi_spec():
             """Serve OpenAPI spec with server URL adjusted for proxy prefix."""
-            dynamic_spec = spec.copy()
             prefix = request.script_root or ""
-            dynamic_spec["servers"] = [{"url": f"{prefix}/api/v1", "description": "API v1"}]
+            dynamic_spec = spec | {"servers": [{"url": f"{prefix}/api/v1", "description": "API v1"}]}
             return flask.Response(yaml.dump(dynamic_spec, sort_keys=False), mimetype="application/x-yaml")
 
         data_transfer = DataTransfer(request_store, staging)
