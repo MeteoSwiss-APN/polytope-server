@@ -119,6 +119,14 @@ class Worker:
 
             await aio.sleep(self.poll_interval)
 
+    @staticmethod
+    def _request_baggage_items(request_id: str, request: PolytopeRequest | None = None) -> dict[str, str]:
+        items = {"request_id": request_id}
+        username = getattr(getattr(request, "user", None), "username", None)
+        if username is not None:
+            items["user.username"] = username
+        return items
+
     async def listen_queue(self, executor: concurrent.futures.Executor) -> None:
         if self.queue is None:
             raise RuntimeError("queue was not initialised")
@@ -133,15 +141,17 @@ class Worker:
                 continue
 
             id = self.queue_msg.body["id"]
-            with with_baggage_items({"request_id": id}):
-                self.request = self.request_store.get_request(id)
+            self.request = self.request_store.get_request(id)
 
-                # This occurs when a request has been revoked while it was on the queue
-                if self.request is None:
+            # This occurs when a request has been revoked while it was on the queue
+            if self.request is None:
+                with with_baggage_items({"request_id": id}):
                     logging.info("Request no longer exists, ignoring")
                     self.queue.ack(self.queue_msg)
                     self.update_status("idle")
                     continue
+
+            with with_baggage_items(self._request_baggage_items(id, self.request)):
 
                 # Occurs if a request crashed a worker and the message gets requeued (status will be PROCESSING)
                 # We do not want to try this request again
@@ -169,10 +179,10 @@ class Worker:
                 self.queue.ack(self.queue_msg)
 
                 self.update_status("idle")
-                await self.terminate()
 
                 self.queue_msg = None
                 self.request = None
+                await self.terminate()
 
     async def terminate(self) -> NoReturn:
         if timeout := self.config.get("timeout"):
@@ -223,7 +233,7 @@ class Worker:
 
         logging.debug(
             "Processing request on collection {}".format(collection.name),
-            extra={"collection": collection.name, "request": request.serialize()},
+            extra={"collection": collection.name, "request": request.serialize_logging()},
         )
 
         input_data = self.fetch_input_data(request.url)
@@ -308,7 +318,7 @@ class Worker:
         """Called when the worker is asked to exit whilst processing a request, and we want to reschedule the request"""
 
         if self.request is not None:
-            with with_baggage_items({"request_id": self.request.id}):
+            with with_baggage_items(self._request_baggage_items(self.request.id, self.request)):
                 if self.request.status == Status.PROCESSING:
                     logging.info("Rescheduling request due to worker shutdown.")
                     error_message = self.request.user_message + "\n" + "Worker shutdown, rescheduling request."

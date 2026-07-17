@@ -57,7 +57,9 @@ class Collection:
         Raises a BadRequest exception if no datasource matches.
         """
         coerced_ur = coercion.coerce(yaml.safe_load(request.user_request))
-        logging.info("Coerced user request", extra={"coerced_request": coerced_ur})
+        logging.info(
+            "Coerced user request", extra={"coerced_request": coerced_ur, "user_request": request.user_request}
+        )
         match_errors = []
         for ds_config in self.ds_configs:
             match_result = DataSource.match(ds_config, coerced_ur, request.user)
@@ -68,7 +70,14 @@ class Collection:
                 request.datasource = ds_config.get("name")
                 request.coerced_request = coerced_ur
                 ds = create_datasource(ds_config)
-                ds.dispatch(request, input_data)
+                try:
+                    ds.dispatch(request, input_data)
+                except Exception:
+                    try:
+                        ds.destroy(request)
+                    except Exception:
+                        logging.exception("Failed to destroy datasource after dispatch error")
+                    raise
                 return ds
             else:
                 match_errors.append(match_result)
