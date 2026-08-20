@@ -273,9 +273,9 @@ class S3Staging(staging.Staging):
     def list(self):
         try:
             resources = []
-            data = self.s3_client.list_objects_v2(Bucket=self.bucket, MaxKeys=999999999999999)
+            data = self.s3_client.list_objects_v2(Bucket=self.bucket)
 
-            if data.get("contents", {}).get("IsTruncated  ncated", False):
+            if data.get("IsTruncated", False):
                 logging.warning("Truncated list of objects. Some objects may not be listed.")
 
             if "Contents" not in data:  # No objects in the bucket
