@@ -275,7 +275,7 @@ class S3Staging(staging.Staging):
             resources = []
             paginator = self.s3_client.get_paginator("list_objects_v2")
             for page in paginator.paginate(Bucket=self.bucket):
-                for o in page["Contents"]:
+                for o in page.get("Contents", []):
                     resources.append(staging.ResourceInfo(o["Key"], o["Size"], o["LastModified"].timestamp()))
             return resources
         except ClientError as e:
