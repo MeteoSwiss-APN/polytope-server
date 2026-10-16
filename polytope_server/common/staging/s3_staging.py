@@ -176,7 +176,7 @@ class S3Staging(staging.Staging):
             raise
 
     def upload_part(self, name, part_number, data, upload_id):
-        logging.debug(f"Uploading part {part_number} of {name}, {len(data)} bytes")
+        logging.info(f"Uploading part {part_number} of {name}, {len(data)} bytes")
         response = self.s3_client.upload_part(
             Bucket=self.bucket,
             Key=name,
