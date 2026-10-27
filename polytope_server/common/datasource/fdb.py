@@ -128,6 +128,8 @@ class FDBDataSource(datasource.DataSource):
         if not self.output:
             return
 
+        self.output.open()
+
         while True:
             d = self.output.read(2 * 1024 * 1024)
             if d:
