@@ -128,17 +128,12 @@ class FDBDataSource(datasource.DataSource):
         if not self.output:
             return
 
-        self.output.open()
-
-        while True:
-            d = self.output.read(2 * 1024 * 1024)
-            if d:
-                yield d
-            else:
-                break
-
-        self.output.close()
-        return
+        # Use readinto(): read() pads the last chunk with zeros.
+        with self.output as dh:
+            buffer = bytearray(2 * 1024 * 1024)
+            view = memoryview(buffer)
+            while (n := dh.readinto(view)) > 0:
+                yield bytes(view[:n])
 
     def destroy(self, request) -> None:
         pass
