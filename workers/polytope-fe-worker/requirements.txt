@@ -3,9 +3,6 @@ polytope-python==2.1.20
 covjsonkit==0.2.26
 PyYAML==6.0.3
 pyfdb==5.25.0.33
-# pygribjump no longer has a `binary` extra since 0.13: install gribjumplib
-# (the C++ library) explicitly. It pins fdb5lib, metkitlib, eccodeslib and
-# eckitlib to the versions that pyfdb uses.
 pygribjump==0.13.1.33
 gribjumplib==0.13.1.33
 # Python eccodes bindings — version pinned to latest available that covers the
