@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# pyfdb and pygribjump[binary] bundle their own C++ stack (fdb5lib, gribjumplib,
+# pyfdb and gribjumplib bundle their own C++ stack (fdb5lib, gribjumplib,
 # eccodeslib, metkitlib, eckitlib) via PyPI manylinux wheels — no separate
 # pre-built ECCR image required.
 
