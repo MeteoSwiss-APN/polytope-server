@@ -10,11 +10,11 @@
 # FDB Build (from source)
 ###############################
 FROM docker.io/library/debian:bookworm-slim AS fdb-build
-ARG ecbuild_version=3.12.0
-ARG eccodes_version=2.46.0
-ARG eckit_version=1.33.0
-ARG metkit_version=1.17.0
-ARG fdb_version=5.19.2
+ARG ecbuild_version=3.13.1
+ARG eccodes_version=2.50.0
+ARG eckit_version=2.5.0
+ARG metkit_version=1.22.0
+ARG fdb_version=5.25.3
 
 RUN apt-get update && apt-get install -y --no-install-recommends cmake build-essential bison flex git libaec-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 

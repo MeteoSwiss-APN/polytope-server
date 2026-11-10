@@ -5,8 +5,8 @@
 # Pre-built C++ FDB stack (eckit, eccodes, metkit, fdb) pulled from ECCR.
 # Built and published from docker/cpp-libs/fdb by the cpp-libs workflow.
 # The stripped image feeds `release`; the -debug (full-symbol) image feeds `debug`.
-ARG FDB_LIBS_IMAGE=eccr.ecmwf.int/polytope/cpp-fdb-libs:fdb5.19.2-r1
-ARG FDB_LIBS_DEBUG_IMAGE=eccr.ecmwf.int/polytope/cpp-fdb-libs-debug:fdb5.19.2-r1
+ARG FDB_LIBS_IMAGE=eccr.ecmwf.int/polytope/cpp-fdb-libs:fdb5.25.3-r1
+ARG FDB_LIBS_DEBUG_IMAGE=eccr.ecmwf.int/polytope/cpp-fdb-libs-debug:fdb5.25.3-r1
 
 ###############################
 # Shared base: Rust + cargo-chef + system deps (built once)

@@ -19,7 +19,7 @@ builds compile only Rust and never touch a C++ compiler.
 | [`mars/`](mars/Dockerfile) | `eccr.ecmwf.int/polytope/cpp-mars-libs` | MARS client bundle → `/opt/mars-client` | `workers/mars-worker/Dockerfile` |
 
 `fdb` and `fdb-gribjump` are separate images on purpose: the fdb-worker and
-fe-worker pin different upstream versions (e.g. fdb 5.19.2 vs 5.21.3), so they
+fe-worker pin different upstream versions (e.g. fdb 5.25.3 vs 5.21.3), so they
 cannot share one image.
 
 ## Stripped (default) vs `-debug` images
@@ -47,8 +47,8 @@ image only when you need to symbolicate a crash in a C++ library.
 
 Each image directory has a `TAG` file containing a single line — the tag the
 image is **published under** for releases and the tag the consuming Dockerfile
-**pulls by default**. For example `fdb/TAG` holds `fdb5.19.2-r1`, which produces
-`eccr.ecmwf.int/polytope/cpp-fdb-libs:fdb5.19.2-r1`.
+**pulls by default**. For example `fdb/TAG` holds `fdb5.25.3-r1`, which produces
+`eccr.ecmwf.int/polytope/cpp-fdb-libs:fdb5.25.3-r1`.
 
 Why a file and not just a hardcoded tag?
 
@@ -65,7 +65,7 @@ Naming convention: describe the stack's headline versions, then a `-rN`
 (base-image refresh, build-flag tweak, etc.):
 
 - `cpp-metkit-libs:metkit1.17.0-r1`
-- `cpp-fdb-libs:fdb5.19.2-r1`
+- `cpp-fdb-libs:fdb5.25.3-r1`
 - `cpp-fdb-gribjump-libs:fdb5.21.3-gribjump0.12.0-r1`
 - `cpp-mars-libs:7.1.12-r2`
 
