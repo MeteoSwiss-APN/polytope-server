@@ -6,13 +6,26 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use clap::Parser;
 use polytope_worker_common::config::{DEFAULT_CONFIG_PATH, WorkerConfigFile};
-use polytope_worker_common::{ProcessResult, Processor, WorkItem, WorkerConfig, run_worker_loop};
+use polytope_worker_common::{
+    ProcessResult, Processor, SourceError, WorkItem, WorkerConfig, run_worker_loop,
+};
 use rsfdb::{FDB, request::Request};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, info, warn};
 
 struct FdbProcessor {
     fdb_config: String,
+}
+
+/// FDB's remote client keeps its connection to each store server for the whole process and does not replace it once
+/// lost (e.g. after a store server restart, see ecmwf/fdb#421): every later retrieval then fails, and only a new
+/// process recovers. Such errors request a worker restart.
+///
+/// NOTE: this relies on the error message of FDB's `ClientConnection::controlWrite()`
+/// (`src/fdb5/remote/client/ClientConnection.cc`): "Connection to <host:port> is no longer valid".
+/// If FDB changes that message, this no longer matches and the worker keeps failing until it is restarted.
+fn is_lost_fdb_connection(message: &str) -> bool {
+    message.contains("is no longer valid")
 }
 
 #[async_trait]
@@ -22,14 +35,23 @@ impl Processor for FdbProcessor {
 
         let request = work.request;
         let (tx, rx) = tokio::sync::mpsc::channel::<Result<Bytes, std::io::Error>>(16);
+        let source_error = SourceError::new();
+        let source_error_for_task = source_error.clone();
         // Held by the blocking task, which can outlive the async job.
         let active = polytope_observability::active_request(&work.job_id);
         tokio::task::spawn_blocking(move || {
             let _active = active;
+            let fail = |err: std::io::Error| {
+                let message = err.to_string();
+                if is_lost_fdb_connection(&message) {
+                    source_error_for_task.set_unrecoverable_once(message);
+                }
+                let _ = tx.blocking_send(Err(err));
+            };
             let fdb = match FDB::new(Some(&fdb_config)) {
                 Ok(fdb) => fdb,
                 Err(err) => {
-                    let _ = tx.blocking_send(Err(std::io::Error::other(err)));
+                    fail(std::io::Error::other(err));
                     return;
                 }
             };
@@ -43,7 +65,7 @@ impl Processor for FdbProcessor {
             let mut reader = match fdb.retrieve(&request) {
                 Ok(reader) => reader,
                 Err(err) => {
-                    let _ = tx.blocking_send(Err(std::io::Error::other(err)));
+                    fail(std::io::Error::other(err));
                     return;
                 }
             };
@@ -60,7 +82,7 @@ impl Processor for FdbProcessor {
                         }
                     }
                     Err(err) => {
-                        let _ = tx.blocking_send(Err(err));
+                        fail(err);
                         break;
                     }
                 }
@@ -68,7 +90,11 @@ impl Processor for FdbProcessor {
         });
 
         let stream = ReceiverStream::new(rx);
-        ProcessResult::success("application/x-grib", Box::new(stream))
+        ProcessResult::success_with_source_error(
+            "application/x-grib",
+            Box::new(stream),
+            source_error,
+        )
     }
 }
 
@@ -143,6 +169,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+    use super::is_lost_fdb_connection;
+
+    #[test]
+    fn detects_lost_fdb_connection() {
+        // Message as produced by FDB 5.25.3 after the store server restarted
+        assert!(is_lost_fdb_connection(
+            "Connection to fdbstore:30041 is no longer valid(RemoteException from fdbstore:30041)"
+        ));
+        assert!(!is_lost_fdb_connection("Exception: Unknown host fdbstore"));
+    }
+
     #[test]
     fn missing_config_panics() {
         let result = std::panic::catch_unwind(|| {
